@@ -34,9 +34,8 @@ test-$(PROGRAM): *.c *.h
 	gcc $(CFLAGS) -g -O0 -o test-$(PROGRAM) *.c -lpthread
 
 install: $(PROGRAM).so
-	$(INSTALL) -d -m 755 $(INCLUDEDIR)
+	$(INSTALL) -d -m 755 $(INCLUDEDIR) $(LIBDIR)
 	$(INSTALL) -m 644 $(HEADERS) $(INCLUDEDIR)
-	$(INSTALL) -d -m 755 $(LIBDIR) 
 	$(INSTALL) -m 644 $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)/$(PROGRAM).so.$(ABI_MAJOR)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)/$(PROGRAM).so
@@ -96,10 +95,11 @@ rpm: clean $(DISTFILE)
 	fakeroot alien --scripts *.rpm
 
 deb: clean $(DISTFILE)
-	mkdir pkg && cd pkg ; \
-	tar zxf ../$(DISTFILE) ; \
-	cp ../$(DISTFILE) $(PROGRAM)_$(VERSION).orig.tar.gz ; \
-	cp -R ../ports/debian $(PROGRAM)-$(VERSION) ; \
+	mkdir pkg
+	cd pkg && tar zxf ../$(DISTFILE) 
+	cp $(DISTFILE) pkg/$(PROGRAM)_$(VERSION).orig.tar.gz
+	cp -R ports/debian pkg/$(PROGRAM)-$(VERSION) 
+	cd pkg && \
 	rm -rf `find $(PROGRAM)-$(VERSION)/debian -type d -name .svn` ; \
 	perl -pi -e 's/\@\@VERSION\@\@/$(VERSION)/' $(PROGRAM)-$(VERSION)/debian/changelog ; \
 	cd $(PROGRAM)-$(VERSION) && dpkg-buildpackage -uc -us

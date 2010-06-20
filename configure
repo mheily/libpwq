@@ -1,8 +1,10 @@
 #!/bin/sh
+#
+# TODO: backport 'distfile' to ./configure trunk
 
 c_exports="program version target cflags"
 
-make_exports="program version target \
+make_exports="program version target distfile \
               prefix libdir includedir mandir \
               cflags ldflags ldadd libdepends \
               sources objs deps mans headers extra_dist subdirs \
@@ -276,6 +278,7 @@ finalize ldadd      ""
 finalize ldflags    ""
 finalize deps       ""
 finalize ln         "`which ln`"
+finalize distfile   "$program-$version.tar.gz"
 
 pre_configure_hook
 
