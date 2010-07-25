@@ -90,6 +90,8 @@ static LIST_HEAD(, _pthread_workqueue) wqlist;
 static pthread_mutex_t   wqlist_mtx;
 static pthread_cond_t    wqlist_has_work;
 
+static int               initialized = 0;
+
 /* The caller must hold the wqlist_mtx. */
 static struct work *
 wqlist_scan(void)
@@ -151,11 +153,50 @@ worker_start(struct worker *wkr, int flags)
     dbg_printf("created a new worker (id=%d)", wkr->id);
 }
 
-static void *
-wq_manager(void *arg)
+static void
+wq_init(void)
+{
+    worker_cnt = 0;
+    worker_min = sysconf(_SC_NPROCESSORS_ONLN) * 2;
+    worker_max = sysconf(_SC_NPROCESSORS_ONLN) * 10;
+
+    /* Create the minimum number of threads */
+    for (worker_cnt = 0; worker_cnt < worker_min; worker_cnt++) 
+        worker_start(&workers[worker_cnt], 0);
+
+    initialized = 1;
+}
+
+static int
+valid_workq(pthread_workqueue_t workq) 
+{
+    if (workq->sig == PTHREAD_WORKQUEUE_SIG)
+        return (1);
+    else
+        return (0);
+}
+
+/*
+ * Public API
+ */
+
+int
+pthread_workqueue_init_np(void) 
+{
+    static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+
+    pthread_once(&once_control, wq_init);
+    return (0);
+}
+
+int
+pthread_main_np(void)
 {
     int i, all_busy;
     sigset_t sigmask;
+
+    if (!initialized)
+        return (-1);
 
     /* Block all signals */
     sigfillset (&sigmask);
@@ -184,47 +225,7 @@ wq_manager(void *arg)
     }
 
     /*NOTREACHED*/
-    return (NULL);
-}
-
-static void
-wq_init(void)
-{
-    pthread_t tid;
-
-    worker_cnt = 0;
-    worker_min = sysconf(_SC_NPROCESSORS_ONLN) * 2;
-    worker_max = sysconf(_SC_NPROCESSORS_ONLN) * 10;
-
-    /* Create the minimum number of threads */
-    for (worker_cnt = 0; worker_cnt < worker_min; worker_cnt++) 
-        worker_start(&workers[worker_cnt], 0);
-
-    while (pthread_create(&tid, NULL, wq_manager, NULL) != 0) {
-        sleep(2);
-    }
-}
-
-static int
-valid_workq(pthread_workqueue_t workq) 
-{
-    if (workq->sig == PTHREAD_WORKQUEUE_SIG)
-        return (1);
-    else
-        return (0);
-}
-
-/*
- * Public API
- */
-
-int
-pthread_workqueue_init_np(void) 
-{
-    static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-
-    pthread_once(&once_control, wq_init);
-    return (0);
+    return (-1);
 }
 
 int
