@@ -34,7 +34,8 @@ test-$(PROGRAM): *.c *.h
 	gcc $(CFLAGS) -g -O0 -o test-$(PROGRAM) *.c -lpthread
 
 install: $(PROGRAM).so
-	$(INSTALL) -d -m 755 $(INCLUDEDIR) $(LIBDIR)
+	$(INSTALL) -d -m 755 $(INCLUDEDIR)
+	$(INSTALL) -d -m 755 $(LIBDIR)
 	$(INSTALL) -m 644 $(HEADERS) $(INCLUDEDIR)
 	$(INSTALL) -m 644 $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)/$(PROGRAM).so.$(ABI_MAJOR)

@@ -183,7 +183,11 @@ valid_workq(pthread_workqueue_t workq)
 int
 pthread_workqueue_init_np(void) 
 {
+#if defined(__SUNPRO_C)
+    static pthread_once_t once_control = { PTHREAD_ONCE_INIT };
+#else
     static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+#endif
 
     pthread_once(&once_control, wq_init);
     return (0);
