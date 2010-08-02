@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/queue.h>
@@ -65,7 +66,7 @@ struct work {
 struct worker {
     unsigned int         id;          /* Index within the workers struct */
     pthread_t            tid;
-    time_t               start_time;  /* Time that work started, or 0 if idle */
+    bool                 busy;
     int                  overcommit;
     unsigned int         flags;
 };
@@ -132,9 +133,9 @@ worker_main(void *arg)
             } while (witem == NULL);
 
         /* Invoke the callback function */
-        self->start_time = time(NULL);
+        self->busy = true;
         witem->func(witem->func_arg);
-        self->start_time = 0;
+        self->busy = false;
         free(witem);
 
         dbg_printf("worker %u finished work", self->id);
@@ -146,7 +147,7 @@ worker_main(void *arg)
 static void
 worker_start(struct worker *wkr, int flags) 
 {
-    wkr->start_time = 0;
+    wkr->busy = false;
     wkr->id = wkr - &workers[0];
     wkr->flags = flags;
     pthread_create(&wkr->tid, NULL, worker_main, wkr);
@@ -196,7 +197,7 @@ pthread_workqueue_init_np(void)
 int
 pthread_main_np(void)
 {
-    int i, all_busy;
+    int i;
     sigset_t sigmask;
 
     if (!initialized)
@@ -207,24 +208,18 @@ pthread_main_np(void)
     pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
 
     for (;;) {
-        /* Start a new thread if all workers are busy */
-        all_busy = 1;
+
+        /* Check if there are any idle workers */
         for (i = 0; i < worker_cnt; i++) {
-            if (workers[i].start_time == 0) {
-                all_busy = 0;
-                break;
-            }
+            if (! workers[i].busy) 
+                goto not_busy;
         }
-        if (all_busy) {
-           if (worker_cnt < worker_max)
+
+        /* Start a new thread if all workers are busy */
+        if (worker_cnt < worker_max)
             worker_start(&workers[worker_cnt++], 0);
-        }
 
-        dbg_printf("%d workers (max: %d); all_busy=%d", 
-                worker_cnt,
-                worker_max,
-                all_busy);
-
+not_busy:
         sleep(1);
     }
 
