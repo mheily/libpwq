@@ -242,7 +242,7 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
     workq->flags = 0;
     STAILQ_INIT(&workq->item_listhead);
     if (attr == NULL) {
-        workq->queueprio = 1;
+        workq->queueprio = WORKQ_DEFAULT_PRIOQUEUE;
         workq->overcommit = 0;
     } else {
         workq->queueprio = attr->queueprio;
