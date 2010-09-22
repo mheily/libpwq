@@ -28,11 +28,14 @@
  */
 
 #include <errno.h>
+#include <limits.h>
+#include <math.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/queue.h>
 #include <unistd.h>
 
@@ -47,6 +50,18 @@
 # define dbg_printf(fmt,...)     ;
 # define dbg_perror(str)         ;
 #endif 
+
+/* GCC atomic builtins. 
+ * See: http://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html 
+ */
+#ifdef __sun
+# include <atomic.h>
+# define atomic_inc      atomic_inc_32
+# define atomic_dec      atomic_dec_32
+#else
+# define atomic_inc(p)   __sync_add_and_fetch((p), 1)
+# define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
+#endif
 
 #define WORKQUEUE_MAX    512            /* DEADWOOD */
 #define WORKER_MAX       512            /* Maximum # of worker threads */
@@ -90,7 +105,7 @@ static unsigned int      worker_max,
 static LIST_HEAD(, _pthread_workqueue) wqlist;
 static pthread_mutex_t   wqlist_mtx;
 static pthread_cond_t    wqlist_has_work;
-
+static unsigned int      wqlist_work_counter;
 static int               initialized = 0;
 
 /* The caller must hold the wqlist_mtx. */
@@ -133,6 +148,7 @@ worker_main(void *arg)
             } while (witem == NULL);
 
         /* Invoke the callback function */
+        atomic_dec(&wqlist_work_counter);
         self->busy = true;
         witem->func(witem->func_arg);
         self->busy = false;
@@ -159,7 +175,7 @@ wq_init(void)
 {
     worker_cnt = 0;
     worker_min = sysconf(_SC_NPROCESSORS_ONLN) * 2;
-    worker_max = sysconf(_SC_NPROCESSORS_ONLN) * 10;
+    worker_max = sysconf(_SC_NPROCESSORS_ONLN) * 4;
 
     /* Create the minimum number of threads */
     for (worker_cnt = 0; worker_cnt < worker_min; worker_cnt++) 
@@ -175,6 +191,29 @@ valid_workq(pthread_workqueue_t workq)
         return (1);
     else
         return (0);
+}
+
+static int
+avg_runqueue_length(void)
+{
+    double loadavg;
+    int retval;
+
+    /* TODO: proper error handling */
+    if (getloadavg(&loadavg, 1) != 1) {
+        dbg_perror("getloadavg(3)");
+        return (1);
+    }
+    if (loadavg > INT_MAX || loadavg < 0)
+        loadavg = 1;
+
+    retval = trunc(loadavg / (double)sysconf(_SC_NPROCESSORS_ONLN));
+    dbg_printf("load_avg=%e / cpu_count=%ld := %d avg_runqueue_len\n",
+            loadavg,
+            sysconf(_SC_NPROCESSORS_ONLN),
+            retval);
+
+    return (retval);
 }
 
 /*
@@ -197,7 +236,7 @@ pthread_workqueue_init_np(void)
 int
 pthread_main_np(void)
 {
-    int i;
+    int idle, i, len;
     sigset_t sigmask;
 
     if (!initialized)
@@ -207,20 +246,39 @@ pthread_main_np(void)
     sigfillset (&sigmask);
     pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
 
-    for (;;) {
+    for (;; sleep(1)) {
+
+        if (wqlist_work_counter == 0)
+            continue;
+
+        dbg_printf("work_count=%u workers=%u max_workers=%u", 
+                wqlist_work_counter, worker_cnt, worker_max);
 
         /* Check if there are any idle workers */
+        idle = 0;
         for (i = 0; i < worker_cnt; i++) {
             if (! workers[i].busy) 
-                goto not_busy;
+                idle++;
         }
+        if (idle > 0)
+            continue;
 
         /* Start a new thread if all workers are busy */
-        if (worker_cnt < worker_max)
+        if (worker_cnt < worker_max) {
             worker_start(&workers[worker_cnt++], 0);
+        } else {
+            len = avg_runqueue_length();
+            dbg_printf("avg_runqueue_length=%d", len);
+            if (len <= 1)
+                worker_start(&workers[worker_cnt++], 0);
+        }
 
-not_busy:
-        sleep(1);
+        if (worker_cnt > worker_max) {
+            /* TODO: kill some idle threads */
+            ;
+        }
+
+        dbg_printf("%u of %u workers", worker_cnt, worker_max);
     }
 
     /*NOTREACHED*/
@@ -298,6 +356,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 #endif //TODO
     STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
     pthread_spin_unlock(&workq->mtx);
+    atomic_inc(&wqlist_work_counter);
     pthread_cond_signal(&wqlist_has_work);
 
     if (itemhandlep != NULL)
