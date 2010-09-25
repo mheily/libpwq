@@ -31,7 +31,7 @@ $(PROGRAM).so: $(OBJS)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so
 
 test-$(PROGRAM): *.c *.h
-	gcc $(CFLAGS) -g -O0 -o test-$(PROGRAM) *.c -lpthread -lm
+	gcc $(CFLAGS) -g -O0 -o test-$(PROGRAM) *.c -lpthread
 
 install: $(PROGRAM).so
 	$(INSTALL) -d -m 755 $(INCLUDEDIR)

@@ -29,7 +29,6 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <math.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -79,7 +78,7 @@ struct work {
 };
 
 struct worker {
-    unsigned int         id;          /* Index within the workers struct */
+    LIST_ENTRY(worker)   entries;
     pthread_t            tid;
     bool                 busy;
     int                  overcommit;
@@ -96,7 +95,11 @@ struct _pthread_workqueue {
     pthread_spinlock_t   mtx;
 };
 
-static struct worker     workers[WORKER_MAX];
+static unsigned int      cpu_count;
+
+static LIST_HEAD(, worker) workers;
+static pthread_mutex_t   workers_mtx;
+static unsigned int      workers_idle_counter;
 static unsigned int      worker_max, 
                          worker_min, 
                          worker_cnt;
@@ -137,49 +140,80 @@ worker_main(void *arg)
     struct worker *self = (struct worker *) arg;
     struct work *witem;
 
+    atomic_inc(&workers_idle_counter);
+
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
         witem = wqlist_scan();
         if (witem == NULL)
             do {
-                dbg_printf("worker %u waiting for work", self->id);
                 pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
                 witem = wqlist_scan();
             } while (witem == NULL);
 
         /* Invoke the callback function */
         atomic_dec(&wqlist_work_counter);
+        atomic_dec(&workers_idle_counter);
         self->busy = true;
         witem->func(witem->func_arg);
         self->busy = false;
+        atomic_inc(&workers_idle_counter);
         free(witem);
-
-        dbg_printf("worker %u finished work", self->id);
     }
     /* NOTREACHED */
     return (NULL);
 }
 
-static void
-worker_start(struct worker *wkr, int flags) 
+static int
+worker_start(int flags) 
 {
+    struct worker *wkr;
+
+    wkr = calloc(1, sizeof(*wkr));
+    if (wkr == NULL) {
+        dbg_perror("calloc(3)");
+        return (-1);
+    }
+
     wkr->busy = false;
-    wkr->id = wkr - &workers[0];
     wkr->flags = flags;
-    pthread_create(&wkr->tid, NULL, worker_main, wkr);
-    dbg_printf("created a new worker (id=%d)", wkr->id);
+    if (pthread_create(&wkr->tid, NULL, worker_main, wkr) != 0) {
+        dbg_perror("pthread_create(3)");
+        return (-1);
+    }
+
+    pthread_mutex_lock(&workers_mtx);
+    LIST_INSERT_HEAD(&workers, wkr, entries);
+    worker_cnt++;
+    pthread_mutex_unlock(&workers_mtx);
+
+    dbg_puts("created a new thread");
+
+    return (0);
 }
 
 static void
 wq_init(void)
 {
+    int i;
+
+    LIST_INIT(&workers);
+    pthread_mutex_init(&workers_mtx, NULL);
+    pthread_mutex_init(&wqlist_mtx, NULL);
+
+    /* TODO: Periodically poll for new CPUs on platforms that support
+             hot-plugging of CPUs.
+     */
+    cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
+
+    /* Determine the initial thread pool constraints */
     worker_cnt = 0;
-    worker_min = sysconf(_SC_NPROCESSORS_ONLN) * 2;
-    worker_max = sysconf(_SC_NPROCESSORS_ONLN) * 4;
+    worker_min = cpu_count * 2;
+    worker_max = cpu_count * 4;
 
     /* Create the minimum number of threads */
-    for (worker_cnt = 0; worker_cnt < worker_min; worker_cnt++) 
-        worker_start(&workers[worker_cnt], 0);
+    for (i = 0; i < worker_min; i++) 
+        worker_start(0);
 
     initialized = 1;
 }
@@ -207,10 +241,10 @@ avg_runqueue_length(void)
     if (loadavg > INT_MAX || loadavg < 0)
         loadavg = 1;
 
-    retval = trunc(loadavg / (double)sysconf(_SC_NPROCESSORS_ONLN));
-    dbg_printf("load_avg=%e / cpu_count=%ld := %d avg_runqueue_len\n",
+    retval = (unsigned int) loadavg / cpu_count;
+    dbg_printf("load_avg=%e / cpu_count=%u := %d avg_runqueue_len\n",
             loadavg,
-            sysconf(_SC_NPROCESSORS_ONLN),
+            cpu_count,
             retval);
 
     return (retval);
@@ -236,7 +270,7 @@ pthread_workqueue_init_np(void)
 int
 pthread_main_np(void)
 {
-    int idle, i, len;
+    int len;
     sigset_t sigmask;
 
     if (!initialized)
@@ -248,30 +282,23 @@ pthread_main_np(void)
 
     for (;; sleep(1)) {
 
-        if (wqlist_work_counter == 0)
-            continue;
-
         dbg_printf("work_count=%u workers=%u max_workers=%u", 
                 wqlist_work_counter, worker_cnt, worker_max);
 
-        /* Check if there are any idle workers */
-        idle = 0;
-        for (i = 0; i < worker_cnt; i++) {
-            if (! workers[i].busy) 
-                idle++;
-        }
-        if (idle > 0)
+        if (wqlist_work_counter == 0 || workers_idle_counter > 0)
             continue;
 
         /* Start a new thread if all workers are busy */
         if (worker_cnt < worker_max) {
-            worker_start(&workers[worker_cnt++], 0);
+            worker_start(0);
         } else {
             len = avg_runqueue_length();
             dbg_printf("avg_runqueue_length=%d", len);
             if (len <= 1)
-                worker_start(&workers[worker_cnt++], 0);
+                worker_start(0);
         }
+
+        /* FIXME: kill workers if load average is too high */
 
         if (worker_cnt > worker_max) {
             /* TODO: kill some idle threads */
