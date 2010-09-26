@@ -270,6 +270,8 @@ pthread_workqueue_init_np(void)
 int
 pthread_main_np(void)
 {
+    const int throttle_interval = 10;
+    int throttle_count = throttle_interval;
     int len;
     sigset_t sigmask;
 
@@ -280,32 +282,44 @@ pthread_main_np(void)
     sigfillset (&sigmask);
     pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
 
-    for (;; sleep(1)) {
+    for (;;) {
 
         dbg_printf("work_count=%u workers=%u max_workers=%u", 
                 wqlist_work_counter, worker_cnt, worker_max);
 
-        if (wqlist_work_counter == 0 || workers_idle_counter > 0)
-            continue;
+        /* Occasionally check if there are too many workers */
+        if (--throttle_count == 0) {
+            len = avg_runqueue_length();
+            if (len > (2*cpu_count)) {
+                //XXX-FIXME actually do something :)
+                dbg_puts("TODO-Try reducing the number of workers");
+            }
+            throttle_count = throttle_interval;
 
-        /* Start a new thread if all workers are busy */
-        if (worker_cnt < worker_max) {
-            worker_start(0);
-        } else {
+            /* When the system load is low, keep the thread pool
+               at the "worker_max" size */
+            if (len <= 1 && worker_cnt > worker_max) {
+                /* TODO: kill some idle threads */
+                ;
+            }
+
+        }
+
+        /* If there are enough workers to handle the current
+           workload, there is no need to spawn any more. */
+        if (workers_idle_counter < wqlist_work_counter) {
+
             len = avg_runqueue_length();
             dbg_printf("avg_runqueue_length=%d", len);
-            if (len <= 1)
+
+            /* Start a new thread if all workers are busy,
+               or the system is idle 
+             */
+            if (worker_cnt < worker_max || len <= 1)
                 worker_start(0);
         }
 
-        /* FIXME: kill workers if load average is too high */
-
-        if (worker_cnt > worker_max) {
-            /* TODO: kill some idle threads */
-            ;
-        }
-
-        dbg_printf("%u of %u workers", worker_cnt, worker_max);
+        sleep(1);
     }
 
     /*NOTREACHED*/
