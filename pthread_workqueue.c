@@ -62,6 +62,9 @@
 # define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #endif
 
+#define WORKQUEUE_MAX    512            /* DEADWOOD */
+#define WORKER_MAX       512            /* Maximum # of worker threads */
+
 /* Signatures/magic numbers.  */
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
 #define PTHREAD_WORKQUEUE_ATTR_SIG  0xBEBEBEBE 
@@ -192,6 +195,8 @@ worker_start(int flags)
 static void
 wq_init(void)
 {
+    int i;
+
     LIST_INIT(&workers);
     pthread_mutex_init(&workers_mtx, NULL);
     pthread_mutex_init(&wqlist_mtx, NULL);
@@ -205,6 +210,10 @@ wq_init(void)
     worker_cnt = 0;
     worker_min = cpu_count * 2;
     worker_max = cpu_count * 4;
+
+    /* Create the minimum number of threads */
+    for (i = 0; i < worker_min; i++) 
+        worker_start(0);
 
     initialized = 1;
 }
@@ -263,7 +272,7 @@ pthread_main_np(void)
 {
     const int throttle_interval = 10;
     int throttle_count = throttle_interval;
-    int i, len;
+    int len;
     sigset_t sigmask;
 
     if (!initialized)
@@ -272,10 +281,6 @@ pthread_main_np(void)
     /* Block all signals */
     sigfillset (&sigmask);
     pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-
-    /* Create the minimum number of threads */
-    for (i = 0; i < worker_min; i++) 
-        worker_start(0);
 
     for (;;) {
 
