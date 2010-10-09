@@ -40,6 +40,10 @@
 
 #include "pthread_workqueue.h"
 
+/* Function prototypes */
+static int avg_runqueue_length(void);
+static void * worker_main(void *arg);
+
 #ifdef PTHREAD_WORKQUEUE_DEBUG
 # define dbg_puts(str)           fprintf(stderr, "%s(): %s\n", __func__,str)
 # define dbg_printf(fmt,...)     fprintf(stderr, "%s(): "fmt"\n", __func__,__VA_ARGS__)
@@ -192,9 +196,66 @@ worker_start(int flags)
     return (0);
 }
 
+static void *
+wq_manager(void *unused)
+{
+    const int throttle_interval = 10;
+    int throttle_count = throttle_interval;
+    int len;
+    sigset_t sigmask;
+
+    /* Block all signals */
+    sigfillset (&sigmask);
+    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+
+    for (;;) {
+
+        dbg_printf("work_count=%u workers=%u max_workers=%u", 
+                wqlist_work_counter, worker_cnt, worker_max);
+
+        /* Occasionally check if there are too many workers */
+        if (--throttle_count == 0) {
+            len = avg_runqueue_length();
+            if (len > (2*cpu_count)) {
+                //XXX-FIXME actually do something :)
+                dbg_puts("TODO-Try reducing the number of workers");
+            }
+            throttle_count = throttle_interval;
+
+            /* When the system load is low, keep the thread pool
+               at the "worker_max" size */
+            if (len <= 1 && worker_cnt > worker_max) {
+                /* TODO: kill some idle threads */
+                ;
+            }
+
+        }
+
+        /* If there are enough workers to handle the current
+           workload, there is no need to spawn any more. */
+        if (workers_idle_counter < wqlist_work_counter) {
+
+            len = avg_runqueue_length();
+            dbg_printf("avg_runqueue_length=%d", len);
+
+            /* Start a new thread if all workers are busy,
+               or the system is idle 
+             */
+            if (worker_cnt < worker_max || len <= 1)
+                worker_start(0);
+        }
+
+        sleep(1);
+    }
+
+    /*NOTREACHED*/
+    return (NULL);
+}
+
 static void
 wq_init(void)
 {
+    pthread_t tid;
     int i;
 
     LIST_INIT(&workers);
@@ -211,9 +272,13 @@ wq_init(void)
     worker_min = cpu_count * 2;
     worker_max = cpu_count * 4;
 
-    /* Create the minimum number of threads */
+    /* Create the minimum number of worker threads */
     for (i = 0; i < worker_min; i++) 
         worker_start(0);
+
+    /* Create a manager thread */
+    /* TODO: error handling */
+    pthread_create(&tid, NULL, wq_manager, NULL);
 
     initialized = 1;
 }
@@ -265,65 +330,6 @@ pthread_workqueue_init_np(void)
 
     pthread_once(&once_control, wq_init);
     return (0);
-}
-
-int
-pthread_main_np(void)
-{
-    const int throttle_interval = 10;
-    int throttle_count = throttle_interval;
-    int len;
-    sigset_t sigmask;
-
-    if (!initialized)
-        return (-1);
-
-    /* Block all signals */
-    sigfillset (&sigmask);
-    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-
-    for (;;) {
-
-        dbg_printf("work_count=%u workers=%u max_workers=%u", 
-                wqlist_work_counter, worker_cnt, worker_max);
-
-        /* Occasionally check if there are too many workers */
-        if (--throttle_count == 0) {
-            len = avg_runqueue_length();
-            if (len > (2*cpu_count)) {
-                //XXX-FIXME actually do something :)
-                dbg_puts("TODO-Try reducing the number of workers");
-            }
-            throttle_count = throttle_interval;
-
-            /* When the system load is low, keep the thread pool
-               at the "worker_max" size */
-            if (len <= 1 && worker_cnt > worker_max) {
-                /* TODO: kill some idle threads */
-                ;
-            }
-
-        }
-
-        /* If there are enough workers to handle the current
-           workload, there is no need to spawn any more. */
-        if (workers_idle_counter < wqlist_work_counter) {
-
-            len = avg_runqueue_length();
-            dbg_printf("avg_runqueue_length=%d", len);
-
-            /* Start a new thread if all workers are busy,
-               or the system is idle 
-             */
-            if (worker_cnt < worker_max || len <= 1)
-                worker_start(0);
-        }
-
-        sleep(1);
-    }
-
-    /*NOTREACHED*/
-    return (-1);
 }
 
 int
