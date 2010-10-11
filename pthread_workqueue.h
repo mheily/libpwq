@@ -49,7 +49,9 @@ typedef struct {
 #define WORKQ_DEFAULT_PRIOQUEUE    1
 #define WORKQ_LOW_PRIOQUEUE        2
 
-int pthread_workqueue_init_np(void);
+__BEGIN_DECLS
+
+int pthread_workqueue_init_np(void) __attribute__ ((constructor));
 
 int pthread_workqueue_create_np(pthread_workqueue_t * workqp,
                const pthread_workqueue_attr_t * attr);
@@ -76,5 +78,7 @@ int pthread_workqueue_requestconcurrency_np(pthread_workqueue_t workq,
 
 int pthread_workqueue_getovercommit_np(pthread_workqueue_t workq,
                    unsigned int *ocommp);
+
+__END_DECLS
 
 #endif  /* _PTHREAD_WORKQUEUE_H */

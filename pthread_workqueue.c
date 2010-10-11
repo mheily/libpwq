@@ -319,7 +319,7 @@ avg_runqueue_length(void)
  * Public API
  */
 
-int
+int __attribute__ ((constructor))
 pthread_workqueue_init_np(void) 
 {
 #if defined(__SUNPRO_C)
