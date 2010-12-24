@@ -37,6 +37,9 @@
 #include <string.h>
 #include <sys/queue.h>
 #include <unistd.h>
+#ifdef __sun
+#include <sys/loadavg.h>
+#endif
 
 #include "pthread_workqueue.h"
 
