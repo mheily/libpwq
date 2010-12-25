@@ -13,6 +13,12 @@ headers="pthread_workqueue.h"
 extra_dist="LICENSE"
 subdirs=""
 
+# Package metadata
+pkg_summary="pthread_workqueue library"
+pkg_description="pthread_workqueue library"
+license="BSD"
+author="Mark Heily"
+
 pre_configure_hook() {
   if [ "$debug" = "yes" ] ; then
       cflags="$cflags -g3 -O0 -DPTHREAD_WORKQUEUE_DEBUG -rdynamic"
