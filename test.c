@@ -11,15 +11,6 @@ static int work_cnt;
 
 pthread_workqueue_t wq;
 
-extern int pthread_main_np(void);
-
-static void *
-wq_manager(void *arg)
-{
-    pthread_main_np();
-    return (NULL);
-}
-
 void additem(void (*func)(void *), 
              void * arg)
 {
@@ -28,12 +19,13 @@ void additem(void (*func)(void *),
     rv = pthread_workqueue_additem_np(wq, *func, arg, NULL, NULL);
     if (rv != 0)
         errx(1, "unable to add item: %s", strerror(rv));
+    puts("added item\n");
 }
 
 void
 compute(void *arg)
 {
-    static const int nval = 10000;
+    static const int nval = 5000;
     int val[nval];
     int i,j;
 
@@ -41,7 +33,7 @@ compute(void *arg)
     for (i = 0; i < nval; i++) {
         val[i] = INT_MAX;
     }
-    for (j = 0; j < 50000; j++) {
+    for (j = 0; j < nval; j++) {
         for (i = 0; i < nval; i++) {
             val[i] /= 3;
             val[i] *= 2;
@@ -49,7 +41,6 @@ compute(void *arg)
             val[i] *= 5;
         }
     }
-    printf("compute task finished\n");
 }
 
 
@@ -125,18 +116,14 @@ run_stress_test(void)
 
 int main() {
     int rv;
-    pthread_t tid;
 
     pthread_workqueue_init_np();
     rv = pthread_workqueue_create_np(&wq, NULL);
     if (rv != 0)
         errx(1, "unable to add item: %s", strerror(rv));
 
-    while (pthread_create(&tid, NULL, wq_manager, NULL) != 0) {
-        sleep(2);
-    }
-
     run_stress_test();
+    puts("exiting");
     exit(0);//XXX-FIXME TEMP
 
     //run_deadlock_test();
