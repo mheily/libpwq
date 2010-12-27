@@ -69,9 +69,6 @@ static void * worker_main(void *arg);
 # define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #endif
 
-#define WORKQUEUE_MAX    512            /* DEADWOOD */
-#define WORKER_MAX       512            /* Maximum # of worker threads */
-
 /* Signatures/magic numbers.  */
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
 #define PTHREAD_WORKQUEUE_ATTR_SIG  0xBEBEBEBE 
