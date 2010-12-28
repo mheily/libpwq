@@ -19,7 +19,6 @@ void additem(void (*func)(void *),
     rv = pthread_workqueue_additem_np(wq, *func, arg, NULL, NULL);
     if (rv != 0)
         errx(1, "unable to add item: %s", strerror(rv));
-    puts("added item\n");
 }
 
 void
@@ -41,6 +40,7 @@ compute(void *arg)
             val[i] *= 5;
         }
     }
+    printf("item %d complete\n", work_cnt--);
 }
 
 
@@ -104,7 +104,7 @@ run_load_test(void)
 void
 run_stress_test(void)
 {
-	const int rounds = 1000;
+	const int rounds = 100;
 	work_cnt = rounds;
     for (int i = 0; i < rounds; i++) {
         additem(compute, NULL);
@@ -113,9 +113,18 @@ run_stress_test(void)
 		sleep(1);
 }
 
+void
+finish_testing(void *unused)
+{
+	puts("All tests completed.\n");
+    sleep(8);       /* Should cause all workers to terminate */
+    exit(0);
+}
 
 int main() {
     int rv;
+
+    printf("process %d started\n", getpid());
 
     pthread_workqueue_init_np();
     rv = pthread_workqueue_create_np(&wq, NULL);
@@ -123,7 +132,13 @@ int main() {
         errx(1, "unable to add item: %s", strerror(rv));
 
     run_stress_test();
-    puts("exiting");
+    additem(sleepy, ".");
+    additem(sleepy, "..");
+    additem(sleepy, "...");
+    run_stress_test();
+    additem(finish_testing, NULL);
+    pause();
+#if DISABLED
     exit(0);//XXX-FIXME TEMP
 
     //run_deadlock_test();
@@ -134,6 +149,5 @@ int main() {
     puts("Sleeping for 2 minutes.. the number of threads should drop\n");
     sleep(120);
 
-	puts("All tests completed.\n");
-    exit(0);
+#endif
 }
