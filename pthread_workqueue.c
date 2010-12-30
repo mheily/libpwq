@@ -36,7 +36,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/queue.h>
-#include <sys/time.h>
 #include <unistd.h>
 #ifdef __sun
 #include <sys/loadavg.h>
@@ -45,7 +44,8 @@
 #include "pthread_workqueue.h"
 
 /* Function prototypes */
-static void    *worker_main(void *arg);
+static int avg_runqueue_length(void);
+static void * worker_main(void *arg);
 
 #ifdef PTHREAD_WORKQUEUE_DEBUG
 # define dbg_puts(str)           fprintf(stderr, "%s(): %s\n", __func__,str)
@@ -73,15 +73,20 @@ static void    *worker_main(void *arg);
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
 #define PTHREAD_WORKQUEUE_ATTR_SIG  0xBEBEBEBE 
 
-/* The number of seconds that a worker will wait for work before terminating */
-#define WORKER_IDLE_TIMEOUT         3
-
 struct work {
     STAILQ_ENTRY(work)   item_entry; 
     void               (*func)(void *);
     void                *func_arg;
     unsigned int         flags;
     unsigned int         gencount;
+};
+
+struct worker {
+    LIST_ENTRY(worker)   entries;
+    pthread_t            tid;
+    bool                 busy;
+    int                  overcommit;
+    unsigned int         flags;
 };
 
 struct _pthread_workqueue {
@@ -98,12 +103,16 @@ static unsigned int      cpu_count;
 
 static LIST_HEAD(, worker) workers;
 static pthread_mutex_t   workers_mtx;
-static unsigned int      workers_count;
+static unsigned int      workers_idle_counter;
+static unsigned int      worker_max, 
+                         worker_min, 
+                         worker_cnt;
 
 /* A list of workqueues, sorted by priority */
 static LIST_HEAD(, _pthread_workqueue) wqlist;
 static pthread_mutex_t   wqlist_mtx;
 static pthread_cond_t    wqlist_has_work;
+static unsigned int      wqlist_work_counter;
 static int               initialized = 0;
 
 /* The caller must hold the wqlist_mtx. */
@@ -113,7 +122,6 @@ wqlist_scan(void)
     pthread_workqueue_t workq;
     struct work *witem;
 
-    /* FIXME: Will not scale to large numbers of wqlists */
     LIST_FOREACH(workq, &wqlist, wqlist_entry) {
         if (STAILQ_EMPTY(&workq->item_listhead))
             continue;
@@ -133,57 +141,144 @@ wqlist_scan(void)
 static void *
 worker_main(void *arg)
 {
+    struct worker *self = (struct worker *) arg;
     struct work *witem;
-    struct timeval tp;
-    struct timespec ts;
-    int rv;
 
-    dbg_puts("worker starting up");
+    atomic_inc(&workers_idle_counter);
 
     for (;;) {
-
-        /* Determine the absolute timeout value */
-        gettimeofday(&tp, NULL);
-        ts.tv_sec  = tp.tv_sec;
-        ts.tv_nsec = tp.tv_usec * 1000;
-        ts.tv_sec += WORKER_IDLE_TIMEOUT; 
-
-        /* Acquire a work item */
         pthread_mutex_lock(&wqlist_mtx);
         witem = wqlist_scan();
-        while (witem == NULL) {
-            rv = pthread_cond_timedwait(&wqlist_has_work, &wqlist_mtx, &ts);
-            if (rv == ETIMEDOUT) {
-                pthread_mutex_unlock(&wqlist_mtx);
-                atomic_dec(&workers_count);
-                dbg_puts("worker exiting due to inactivity");
-                pthread_exit(0);
-            } else if (rv < 0) {
-                abort(); /* FIXME: too extreme */
-            }
-
-            witem = wqlist_scan();
-        }
+        if (witem == NULL)
+            do {
+                pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
+                witem = wqlist_scan();
+            } while (witem == NULL);
 
         /* Invoke the callback function */
+        atomic_dec(&wqlist_work_counter);
+        atomic_dec(&workers_idle_counter);
+        self->busy = true;
         witem->func(witem->func_arg);
+        self->busy = false;
+        atomic_inc(&workers_idle_counter);
         free(witem);
     }
     /* NOTREACHED */
     return (NULL);
 }
 
+static int
+worker_start(int flags) 
+{
+    struct worker *wkr;
+
+    wkr = calloc(1, sizeof(*wkr));
+    if (wkr == NULL) {
+        dbg_perror("calloc(3)");
+        return (-1);
+    }
+
+    wkr->busy = false;
+    wkr->flags = flags;
+    if (pthread_create(&wkr->tid, NULL, worker_main, wkr) != 0) {
+        dbg_perror("pthread_create(3)");
+        return (-1);
+    }
+
+    pthread_mutex_lock(&workers_mtx);
+    LIST_INSERT_HEAD(&workers, wkr, entries);
+    worker_cnt++;
+    pthread_mutex_unlock(&workers_mtx);
+
+    dbg_puts("created a new thread");
+
+    return (0);
+}
+
+static void *
+wq_manager(void *unused)
+{
+    const int throttle_interval = 10;
+    int throttle_count = throttle_interval;
+    int len;
+    sigset_t sigmask;
+
+    /* Block all signals */
+    sigfillset (&sigmask);
+    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+
+    for (;;) {
+
+        dbg_printf("work_count=%u workers=%u max_workers=%u", 
+                wqlist_work_counter, worker_cnt, worker_max);
+
+        /* Occasionally check if there are too many workers */
+        if (--throttle_count == 0) {
+            len = avg_runqueue_length();
+            if (len > (2*cpu_count)) {
+                //XXX-FIXME actually do something :)
+                dbg_puts("TODO-Try reducing the number of workers");
+            }
+            throttle_count = throttle_interval;
+
+            /* When the system load is low, keep the thread pool
+               at the "worker_max" size */
+            if (len <= 1 && worker_cnt > worker_max) {
+                /* TODO: kill some idle threads */
+                ;
+            }
+
+        }
+
+        /* If there are enough workers to handle the current
+           workload, there is no need to spawn any more. */
+        if (workers_idle_counter < wqlist_work_counter) {
+
+            len = avg_runqueue_length();
+            dbg_printf("avg_runqueue_length=%d", len);
+
+            /* Start a new thread if all workers are busy,
+               or the system is idle 
+             */
+            if (worker_cnt < worker_max || len <= 1)
+                worker_start(0);
+        }
+
+        sleep(1);
+    }
+
+    /*NOTREACHED*/
+    return (NULL);
+}
+
 static void
 wq_init(void)
 {
+    pthread_t tid;
+    int i;
+
     LIST_INIT(&workers);
     pthread_mutex_init(&workers_mtx, NULL);
     pthread_mutex_init(&wqlist_mtx, NULL);
 
-    /* TODO: Handle platforms that support hot-plugging of CPUs.  */
+    /* TODO: Periodically poll for new CPUs on platforms that support
+             hot-plugging of CPUs.
+     */
     cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
 
-    workers_count = 0;
+    /* Determine the initial thread pool constraints */
+    worker_cnt = 0;
+    worker_min = cpu_count * 2;
+    worker_max = cpu_count * 4;
+
+    /* Create the minimum number of worker threads */
+    for (i = 0; i < worker_min; i++) 
+        worker_start(0);
+
+    /* Create a manager thread */
+    /* TODO: error handling */
+    pthread_create(&tid, NULL, wq_manager, NULL);
 
     initialized = 1;
 }
@@ -197,7 +292,6 @@ valid_workq(pthread_workqueue_t workq)
         return (0);
 }
 
-#if DEADWOOD
 static int
 avg_runqueue_length(void)
 {
@@ -220,7 +314,6 @@ avg_runqueue_length(void)
 
     return (retval);
 }
-#endif
 
 /*
  * Public API
@@ -284,7 +377,6 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
                      unsigned int *gencountp)
 {
     struct work *witem;
-    pthread_t tid;
     
     if (valid_workq(workq) == 0)
         return (EINVAL);
@@ -311,6 +403,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 #endif //TODO
     STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
     pthread_spin_unlock(&workq->mtx);
+    atomic_inc(&wqlist_work_counter);
     pthread_cond_signal(&wqlist_has_work);
 
     if (itemhandlep != NULL)
@@ -318,25 +411,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
     if (gencountp != NULL)
         *gencountp = witem->gencount;
 
-    //dbg_printf("added an item to queue %p", workq);
-
-    /* Make sure there are enough workers. */
-    /* NOTE: There is a race condition when accessing workers_count. 
-       The consequences of losing the race is that an extra thread is created,
-       which will self-terminate if there is not enough work to do.
-       The performance benefit of not using a global mutex makes
-       this an acceptable risk.
-
-       XXX-FIXME the other race is not so nice, when all workers die off
-       before the workers_count is decremented.
-       */
-    if (workers_count < cpu_count) {
-        if (pthread_create(&tid, NULL, worker_main, NULL) != 0) {
-            dbg_perror("pthread_create(3)");
-            return (-1);
-        }
-        atomic_inc(&workers_count);
-    }
+    dbg_printf("added an item to queue %p", workq);
 
     return (0);
 }
