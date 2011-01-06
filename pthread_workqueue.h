@@ -53,7 +53,7 @@ typedef struct {
 	extern "C" {
 #endif
 		
-int pthread_workqueue_init_np(void) __attribute__ ((constructor));
+int pthread_workqueue_init_np(void);
 
 int pthread_workqueue_create_np(pthread_workqueue_t * workqp,
                const pthread_workqueue_attr_t * attr);

@@ -25,6 +25,7 @@ void additem(void (*func)(void *),
 void
 compute(void *arg)
 {
+    int *count = (int *) arg;
     static const int nval = 5000;
     int val[nval];
     int i,j;
@@ -41,6 +42,9 @@ compute(void *arg)
             val[i] *= 5;
         }
     }
+
+    if (count != NULL) 
+        (*count)--;
 }
 
 
@@ -104,13 +108,14 @@ run_load_test(void)
 void
 run_stress_test(void)
 {
-	const int rounds = 1000;
+	const int rounds = 25;
 	work_cnt = rounds;
     for (int i = 0; i < rounds; i++) {
-        additem(compute, NULL);
+        additem(compute, &work_cnt);
     }
 	while (work_cnt > 0)
 		sleep(1);
+    puts("====== stress test complete =======");
 }
 
 
@@ -122,17 +127,15 @@ int main() {
     if (rv != 0)
         errx(1, "unable to add item: %s", strerror(rv));
 
+    sleep(3);
     run_stress_test();
-    puts("exiting");
-    exit(0);//XXX-FIXME TEMP
+    pthread_exit(0);
 
     //run_deadlock_test();
     run_cond_wait_test();
     run_blocking_test();
     //run_load_test();
 
-    puts("Sleeping for 2 minutes.. the number of threads should drop\n");
-    sleep(120);
 
 	puts("All tests completed.\n");
     exit(0);
