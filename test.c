@@ -106,9 +106,8 @@ run_load_test(void)
 
 /* Try to overwhelm the CPU with computation requests */
 void
-run_stress_test(void)
+run_stress_test(int rounds)
 {
-	const int rounds = 25;
 	work_cnt = rounds;
     for (int i = 0; i < rounds; i++) {
         additem(compute, &work_cnt);
@@ -127,8 +126,8 @@ int main() {
     if (rv != 0)
         errx(1, "unable to add item: %s", strerror(rv));
 
-    sleep(3);
-    run_stress_test();
+    run_stress_test(25);
+    run_stress_test(200);
     pthread_exit(0);
 
     //run_deadlock_test();

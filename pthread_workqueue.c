@@ -248,6 +248,8 @@ manager_main(void *unused)
 {
     const size_t max_idle = 5;
     size_t idle_timeout = max_idle;
+    const size_t max_choke = 2;
+    size_t choke_timeout = max_choke;
     int i, len;
     sigset_t sigmask;
 
@@ -261,8 +263,11 @@ manager_main(void *unused)
 
     for (;;) {
 
-        dbg_printf("work_count=%u workers=%u max_workers=%u idle_timeout=%zu", 
-                wqlist_work_counter, worker_cnt, worker_max, idle_timeout);
+        dbg_printf("work_count=%u workers=%u max_workers=%u idle=%zu "
+                   "choke=%zu", 
+                wqlist_work_counter, worker_cnt, worker_max, idle_timeout,
+                choke_timeout
+                );
 
         /* Check if there is too much work and not enough workers */
         if ((wqlist_work_counter > worker_cnt) && (worker_cnt < worker_max)) {
@@ -273,6 +278,21 @@ manager_main(void *unused)
             } else {
                 dbg_puts("System load is too high to spawn another worker.");
             }
+        }
+
+        /* Check if there are too many active workers and not enough CPUs */
+        if (choke_timeout == 0) {
+            len = avg_runqueue_length();
+            if ((len > 2) && (worker_cnt > worker_max)) {
+                    dbg_puts("Workload is too high, removing one thread from the thread pool");
+                    worker_stop();
+            } else if ((len < 3) && (wqlist_work_counter > 0)) {
+                dbg_puts("Some workers may be stalled, will add another thread");
+                worker_start();
+            }
+            choke_timeout = max_choke;
+        } else {
+            choke_timeout--;
         }
 
         /* Check if there are too many workers and not enough work*/
