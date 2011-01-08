@@ -87,6 +87,11 @@ struct work {
 struct worker {
     LIST_ENTRY(worker)   entries;
     pthread_t            tid;
+    enum {
+        WORKER_STATE_SLEEPING,
+        WORKER_STATE_RUNNING,
+        WORKER_STATE_ZOMBIE,
+    } state;
 };
 
 struct _pthread_workqueue {
@@ -102,10 +107,8 @@ struct _pthread_workqueue {
 static unsigned int      cpu_count;
 
 static LIST_HEAD(, worker) workers;
-static pthread_mutex_t   workers_mtx;
 static unsigned int      worker_max, 
-                         worker_min, 
-                         worker_cnt;
+                         worker_min;
 
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static pthread_mutex_t   wqlist_mtx;
@@ -158,22 +161,20 @@ worker_main(void *arg)
         witem = wqlist_scan();
         if (witem == NULL)
             do {
+                self->state = WORKER_STATE_SLEEPING;
                 pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
                 witem = wqlist_scan();
             } while (witem == NULL);
 
         if (witem->func == NULL) {
             dbg_puts("worker exiting..");
-            pthread_mutex_lock(&workers_mtx);
-            LIST_REMOVE(self, entries);
-            /* NOTE: worker_cnt was decremented by worker_stop() */
-            pthread_mutex_unlock(&workers_mtx);
-            free(self);
+            self->state = WORKER_STATE_ZOMBIE;
             free(witem);
             pthread_exit(0);
         }
 
         /* Invoke the callback function */
+        self->state = WORKER_STATE_RUNNING;
         atomic_dec(&wqlist_work_counter);
         witem->func(witem->func_arg);
         free(witem);
@@ -198,10 +199,7 @@ worker_start(void)
         return (-1);
     }
 
-    pthread_mutex_lock(&workers_mtx);
     LIST_INSERT_HEAD(&workers, wkr, entries);
-    worker_cnt++;
-    pthread_mutex_unlock(&workers_mtx);
 
     dbg_puts("created a new thread");
 
@@ -229,10 +227,6 @@ worker_stop(void)
         pthread_mutex_unlock(&wqlist_mtx);
         pthread_cond_signal(&wqlist_has_work);
 
-        pthread_mutex_lock(&workers_mtx);
-        worker_cnt--;
-        pthread_mutex_unlock(&workers_mtx);
-
         return (0);
     }
 
@@ -246,31 +240,63 @@ worker_stop(void)
 static void *
 manager_main(void *unused)
 {
+    struct worker *wkr;
     const size_t max_idle = 5;
     size_t idle_timeout = max_idle;
     const size_t max_choke = 2;
     size_t choke_timeout = max_choke;
     int i, len;
     sigset_t sigmask;
+    struct {
+        unsigned int count,
+                     sleeping,
+                     running;
+    } st;
+    
 
     /* Block all signals */
     sigfillset (&sigmask);
     pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
 
     /* Create the minimum number of workers */
-    for (i = 0; i < worker_min; i++) 
+    st.count = 0;
+    for (i = 0; i < worker_min; i++) {
         worker_start();
+        st.count++;
+    }
 
     for (;;) {
 
         dbg_printf("work_count=%u workers=%u max_workers=%u idle=%zu "
                    "choke=%zu", 
-                wqlist_work_counter, worker_cnt, worker_max, idle_timeout,
-                choke_timeout
+                   wqlist_work_counter, st.count, worker_max, idle_timeout,
+                   choke_timeout
                 );
 
+        /* Examine each worker and update statistics */
+        st.sleeping = 0;
+        st.running = 0;
+        LIST_FOREACH(wkr, &workers, entries) {
+            switch (wkr->state) {
+                case WORKER_STATE_SLEEPING:
+                    st.sleeping++;
+                    break;
+
+                case WORKER_STATE_RUNNING:
+                    st.running++;
+                    /* TODO: check for stalled worker */
+                    break;
+
+                case WORKER_STATE_ZOMBIE:
+                    LIST_REMOVE(wkr, entries);
+                    st.count--;
+                    free(wkr);
+                    break;
+            }
+        }
+
         /* Check if there is too much work and not enough workers */
-        if ((wqlist_work_counter > worker_cnt) && (worker_cnt < worker_max)) {
+        if ((wqlist_work_counter > st.count) && (st.count < worker_max)) {
             len = avg_runqueue_length();
             if (len < (2*cpu_count)) {
                 dbg_puts("Too much work, spawning another worker");
@@ -283,7 +309,7 @@ manager_main(void *unused)
         /* Check if there are too many active workers and not enough CPUs */
         if (choke_timeout == 0) {
             len = avg_runqueue_length();
-            if ((len > 2) && (worker_cnt > worker_max)) {
+            if ((len > 2) && (st.count > worker_max)) {
                     dbg_puts("Workload is too high, removing one thread from the thread pool");
                     worker_stop();
             } else if ((len < 3) && (wqlist_work_counter > 0)) {
@@ -297,7 +323,7 @@ manager_main(void *unused)
 
         /* Check if there are too many workers and not enough work*/
         if (wqlist_work_counter == 0) {
-            if (worker_cnt > worker_min) {
+            if (st.count > worker_min) {
                 dbg_puts("Removing one thread from the thread pool");
                 worker_stop();
                 idle_timeout++;
@@ -305,17 +331,15 @@ manager_main(void *unused)
 
             if (idle_timeout > 0) {
                 idle_timeout--;
-            } else if (worker_cnt > 0) {
+            } else if (st.count > 0) {
                 dbg_puts("Removing one thread from the thread pool");
                 worker_stop();
                 idle_timeout++;
-            } else if (worker_cnt == 0) {
+            } else if (st.count == 0) {
 
                 /* Confirm that all workers have exited */
-                pthread_mutex_lock(&workers_mtx);
                 if (! LIST_EMPTY(&workers))
                     idle_timeout++;
-                pthread_mutex_unlock(&workers_mtx);
 
                 if (idle_timeout == 0) {
                     dbg_puts("killing the manager thread");
@@ -362,7 +386,6 @@ static void
 wq_init(void)
 {
     LIST_INIT(&workers);
-    pthread_mutex_init(&workers_mtx, NULL);
     pthread_mutex_init(&wqlist_mtx, NULL);
 
     cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
@@ -371,7 +394,6 @@ wq_init(void)
     pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
 
     /* Determine the initial thread pool constraints */
-    worker_cnt = 0;
     worker_min = cpu_count;
     worker_max = cpu_count * 2;
 }
