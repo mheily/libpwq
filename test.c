@@ -128,11 +128,10 @@ int main() {
 
     run_stress_test(25);
     run_stress_test(200);
-    pthread_exit(0);
 
     //run_deadlock_test();
-    run_cond_wait_test();
-    run_blocking_test();
+//    run_cond_wait_test();
+//    run_blocking_test();
     //run_load_test();
 
 
