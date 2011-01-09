@@ -53,7 +53,7 @@ typedef struct {
 	extern "C" {
 #endif
 		
-int pthread_workqueue_init_np(void);
+int pthread_workqueue_init_np(void) __attribute__ ((constructor));
 
 int pthread_workqueue_create_np(pthread_workqueue_t * workqp,
                const pthread_workqueue_attr_t * attr);
@@ -80,6 +80,8 @@ int pthread_workqueue_requestconcurrency_np(pthread_workqueue_t workq,
 
 int pthread_workqueue_getovercommit_np(pthread_workqueue_t workq,
                    unsigned int *ocommp);
+
+void pthread_workqueue_main_np(void);
 
 #if defined(__cplusplus)
 	}
