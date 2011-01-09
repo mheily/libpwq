@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/queue.h>
 #include <unistd.h>
 #ifdef __sun
@@ -44,8 +45,9 @@
 #include "pthread_workqueue.h"
 
 /* Function prototypes */
-static int avg_runqueue_length(void);
+static unsigned int get_load_average(void);
 static void * worker_main(void *arg);
+static unsigned int get_process_limit(void);
 
 #ifdef PTHREAD_WORKQUEUE_DEBUG
 # define dbg_puts(str)           fprintf(stderr, "%s(): %s\n", __func__,str)
@@ -107,21 +109,24 @@ struct _pthread_workqueue {
 static unsigned int      cpu_count;
 
 static LIST_HEAD(, worker) workers;
-static unsigned int      worker_max, 
-                         worker_min;
+static unsigned int      worker_min;
 
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static pthread_mutex_t   wqlist_mtx;
 static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
 static unsigned int      wqlist_work_counter;
+static pthread_cond_t    manager_init = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t   manager_mtx = PTHREAD_MUTEX_INITIALIZER;
 
+/*
 static pthread_once_t    init_once_control = 
 #if defined(__SUNPRO_C) || (defined(__sun) && defined(__clang__))
                             { PTHREAD_ONCE_INIT };
 #else
                               PTHREAD_ONCE_INIT;
 #endif
+*/
 
 static pthread_attr_t    detached_attr;
 
@@ -206,7 +211,8 @@ worker_start(void)
     return (0);
 }
 
-static int
+//static int
+int
 worker_stop(void) 
 {
     struct work *witem;
@@ -241,22 +247,23 @@ static void *
 manager_main(void *unused)
 {
     struct worker *wkr;
-    const size_t max_idle = 5;
-    size_t idle_timeout = max_idle;
-    const size_t max_choke = 2;
-    size_t choke_timeout = max_choke;
-    int i, len;
-    sigset_t sigmask;
+    unsigned int load_max = cpu_count * 2;
+    unsigned int worker_max;
+    int i;
+    sigset_t sigmask, oldmask;
     struct {
-        unsigned int count,
+        unsigned int load,
+                     count,
                      sleeping,
                      running;
     } st;
     
+    worker_max = get_process_limit();
+    st.load = get_load_average();
 
     /* Block all signals */
-    sigfillset (&sigmask);
-    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+    sigfillset(&sigmask);
+    pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);
 
     /* Create the minimum number of workers */
     st.count = 0;
@@ -265,12 +272,14 @@ manager_main(void *unused)
         st.count++;
     }
 
+    pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
+
+    pthread_cond_signal(&manager_init);
+
     for (;;) {
 
-        dbg_printf("work_count=%u workers=%u max_workers=%u idle=%zu "
-                   "choke=%zu", 
-                   wqlist_work_counter, st.count, worker_max, idle_timeout,
-                   choke_timeout
+        dbg_printf("load=%u work_count=%u workers=%u max_workers=%u",
+                   st.load, wqlist_work_counter, st.count, worker_max
                 );
 
         /* Examine each worker and update statistics */
@@ -295,10 +304,19 @@ manager_main(void *unused)
             }
         }
 
+        if (st.sleeping == 0) {
+            st.load = get_load_average();
+            if (st.load < load_max) {
+                dbg_puts("All workers are busy, spawning another worker");
+                if (worker_start() == 0)
+                    st.count++;
+            }
+        }
+
+#if DEADWOOD
         /* Check if there is too much work and not enough workers */
         if ((wqlist_work_counter > st.count) && (st.count < worker_max)) {
-            len = avg_runqueue_length();
-            if (len < (2*cpu_count)) {
+            if (st.load < cpu_count) {
                 dbg_puts("Too much work, spawning another worker");
                 worker_start();
             } else {
@@ -308,8 +326,7 @@ manager_main(void *unused)
 
         /* Check if there are too many active workers and not enough CPUs */
         if (choke_timeout == 0) {
-            len = avg_runqueue_length();
-            if ((len > 2) && (st.count > worker_max)) {
+            if ((st.load > cpu_count) && (st.count > worker_max)) {
                     dbg_puts("Workload is too high, removing one thread from the thread pool");
                     worker_stop();
             } else if ((len < 3) && (wqlist_work_counter > 0)) {
@@ -352,6 +369,7 @@ manager_main(void *unused)
                 }
             }
         }
+#endif
 
         sleep(1);
     }
@@ -382,8 +400,51 @@ manager_start(void)
     wqlist_has_manager = 1;
 }
 
-static void
-wq_init(void)
+static int
+valid_workq(pthread_workqueue_t workq) 
+{
+    if (workq->sig == PTHREAD_WORKQUEUE_SIG)
+        return (1);
+    else
+        return (0);
+}
+
+
+static unsigned int
+get_process_limit(void)
+{
+    struct rlimit rlim;
+
+    if (getrlimit(RLIMIT_NPROC, &rlim) < 0) {
+        dbg_perror("getrlimit(2)");
+        return (50);
+    } else {
+        return (rlim.rlim_max);
+    }
+}
+
+static unsigned int
+get_load_average(void)
+{
+    double loadavg;
+
+    /* TODO: proper error handling */
+    if (getloadavg(&loadavg, 1) != 1) {
+        dbg_perror("getloadavg(3)");
+        return (1);
+    }
+    if (loadavg > INT_MAX || loadavg < 0)
+        loadavg = 1;
+
+    return ((int) loadavg);
+}
+
+/*
+ * Public API
+ */
+
+int __attribute__ ((constructor))
+pthread_workqueue_init_np(void)
 {
     LIST_INIT(&workers);
     pthread_mutex_init(&wqlist_mtx, NULL);
@@ -395,50 +456,13 @@ wq_init(void)
 
     /* Determine the initial thread pool constraints */
     worker_min = cpu_count;
-    worker_max = cpu_count * 2;
-}
 
-static int
-valid_workq(pthread_workqueue_t workq) 
-{
-    if (workq->sig == PTHREAD_WORKQUEUE_SIG)
-        return (1);
-    else
-        return (0);
-}
+    manager_start();
 
-static int
-avg_runqueue_length(void)
-{
-    double loadavg;
-    int retval;
+    pthread_cond_wait(&manager_init, &manager_mtx);
+    pthread_mutex_unlock(&manager_mtx);
 
-    /* TODO: proper error handling */
-    if (getloadavg(&loadavg, 1) != 1) {
-        dbg_perror("getloadavg(3)");
-        return (1);
-    }
-    if (loadavg > INT_MAX || loadavg < 0)
-        loadavg = 1;
-
-    retval = (unsigned int) loadavg / cpu_count;
-    dbg_printf("load_avg=%e / cpu_count=%u := %d avg_runqueue_len\n",
-            loadavg,
-            cpu_count,
-            retval);
-
-    return (retval);
-}
-
-/*
- * Public API
- */
-
-//int __attribute__ ((constructor))
-int
-pthread_workqueue_init_np(void) 
-{
-    pthread_once(&init_once_control, wq_init);
+    dbg_puts("pthread_workqueue library initialized");
     return (0);
 }
 
@@ -448,7 +472,6 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
 {
     pthread_workqueue_t workq;
 
-    pthread_once(&init_once_control, wq_init);
     if ((attr != NULL) && ((attr->sig != PTHREAD_WORKQUEUE_ATTR_SIG) ||
          (attr->queueprio < 0) || (attr->queueprio > WORKQ_NUM_PRIOQUEUE)))
         return (EINVAL);
@@ -470,6 +493,8 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
     LIST_INSERT_HEAD(&wqlist[workq->queueprio], workq, wqlist_entry);
     pthread_mutex_unlock(&wqlist_mtx);
 
+    dbg_printf("created queue %p", workq);
+
     *workqp = workq;
     return (0);
 }
@@ -482,6 +507,8 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 {
     struct work *witem;
     
+    dbg_puts("entering additem...");
+
     if (valid_workq(workq) == 0)
         return (EINVAL);
 
@@ -584,4 +611,37 @@ pthread_workqueue_attr_setqueuepriority_np(
         }
     } else
         return (EINVAL);
+}
+
+/*
+ * Does not exist in the Apple implementation, but needed on Linux
+ * due to a kernel bug that causes the process to become a zombie when
+ * the main thread calls pthread_exit().
+ *
+ * More info:
+ *   http://www.0x61.com/forum/viewtopic.php?f=109&t=997736&view=next
+ */
+void
+pthread_workqueue_main_np(void)
+{
+
+    //TESTING - dispatch testsuite requires this..
+    pthread_exit(0);
+
+    /* 
+    struct worker w;
+    pthread_mutex_lock(&wqlist_mtx);
+    if (wqlist_has_manager) {
+        pthread_mutex_unlock(&wqlist_mtx);
+        dbg_puts("running as a worker");
+        memset(&w, 0, sizeof(w));
+        worker_main(&w);
+    } else {
+        wqlist_has_manager = 1;
+        pthread_mutex_unlock(&wqlist_mtx);
+
+        dbg_puts("running as a manager");
+        manager_main(NULL);
+    }
+    */
 }
