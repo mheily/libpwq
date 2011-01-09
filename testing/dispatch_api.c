@@ -19,7 +19,9 @@
  * @APPLE_APACHE_LICENSE_HEADER_END@
  */
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <dispatch/dispatch.h>
 

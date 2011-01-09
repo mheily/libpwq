@@ -1,5 +1,7 @@
+CC=clang
+
 dispatch_api:
-	clang -o dispatch_api dispatch_api.c -lpthread -lrt -ldispatch -lBlocksRuntime -lkqueue -lpthread_workqueue -lm
+	$(CC) -o dispatch_api dispatch_api.c -lpthread -lrt -ldispatch -lBlocksRuntime -lkqueue -lpthread_workqueue
 
 check: dispatch_api
 	./dispatch_api
