@@ -413,6 +413,7 @@ valid_workq(pthread_workqueue_t workq)
 static unsigned int
 get_process_limit(void)
 {
+#if __linux__
     struct rlimit rlim;
 
     if (getrlimit(RLIMIT_NPROC, &rlim) < 0) {
@@ -421,6 +422,10 @@ get_process_limit(void)
     } else {
         return (rlim.rlim_max);
     }
+#else
+    /* Solaris doesn't define this limit anywhere I can see.. */
+    return (128);
+#endif
 }
 
 static unsigned int
