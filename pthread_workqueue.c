@@ -163,13 +163,11 @@ worker_main(void *arg)
 
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
-        witem = wqlist_scan();
-        if (witem == NULL)
-            do {
-                self->state = WORKER_STATE_SLEEPING;
-                pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
-                witem = wqlist_scan();
-            } while (witem == NULL);
+
+        self->state = WORKER_STATE_SLEEPING;
+        
+        while ((witem = wqlist_scan()) == NULL)
+            pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
 
         if (witem->func == NULL) {
             dbg_puts("worker exiting..");
@@ -230,8 +228,8 @@ worker_stop(void)
             continue;
 
         STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
-        pthread_mutex_unlock(&wqlist_mtx);
         pthread_cond_signal(&wqlist_has_work);
+        pthread_mutex_unlock(&wqlist_mtx);
 
         return (0);
     }
@@ -529,15 +527,18 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 
     /* TODO: possibly use a separate mutex or some kind of atomic CAS */
     pthread_mutex_lock(&wqlist_mtx);
+
     if (!wqlist_has_manager)
         manager_start();
-    pthread_mutex_unlock(&wqlist_mtx);
 
     pthread_spin_lock(&workq->mtx);
     STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
     pthread_spin_unlock(&workq->mtx);
-    atomic_inc(&wqlist_work_counter);
+
     pthread_cond_signal(&wqlist_has_work);
+    pthread_mutex_unlock(&wqlist_mtx);
+
+    atomic_inc(&wqlist_work_counter);
 
     if (itemhandlep != NULL)
         *itemhandlep = (pthread_workitem_handle_t *) witem;

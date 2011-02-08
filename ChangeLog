@@ -1,4 +1,20 @@
-6/13/2010   
-0.1
+Version 0.2 HEAD
+---
+
+ * Fix a race condition that would cause deadlock in rare cases when either:
+     1) pthread_cond_signal() was called while no other threads were 
+        blocked a call to pthread_cond_wait(), or
+     2) pthread_cond_signal() was called multiple times before the any thread
+        blocking in a call to pthread_cond_wait() was awoken by the scheduler.
+
+   The fix is to ensure that the call to pthread_cond_signal() occurs while
+   the calling thread holds the same mutex used by the threads that call
+   pthread_cond_wait().
+
+   Credit to Joakim Johansson for finding the bug and providing a patch.
+
+Version 0.1 r?
+released 6/13/2010   
+---
 
   * Initial release
