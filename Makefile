@@ -54,7 +54,6 @@ reinstall: uninstall install
  
 check: test-$(PROGRAM)
 	./test-$(PROGRAM)
-	cd testing && make check
 
 valgrind: test-$(PROGRAM)
 	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)

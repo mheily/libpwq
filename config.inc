@@ -25,6 +25,7 @@ pre_configure_hook() {
   else
       cflags="$cflags -g -O2"
   fi
+  check_header err.h
 }
 
 post_configure_hook() {

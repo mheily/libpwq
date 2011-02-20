@@ -1,9 +1,17 @@
-#include <err.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "config.h"
+
+#if HAVE_ERR_H
+# include <err.h>
+#else
+# define err(rc,msg,...) do { perror(msg); exit(rc); } while (0)
+# define errx(rc,msg,...) do { puts(msg); exit(rc); } while (0)
+#endif
 
 #include "pthread_workqueue.h"
 
@@ -121,13 +129,19 @@ run_stress_test(int rounds)
 int main() {
     int rv;
 
+    printf("pthread_workqueue_init_np().. ");
     pthread_workqueue_init_np();
+    printf("ok\n");
+
+    printf("pthread_workqueue_create_np().. ");
     rv = pthread_workqueue_create_np(&wq, NULL);
     if (rv != 0)
-        errx(1, "unable to add item: %s", strerror(rv));
+        errx(1, "failed", strerror(rv));
+    printf("ok\n");
 
+    printf("stress test.. ");
     run_stress_test(25);
-    run_stress_test(200);
+    printf("ok\n");
 
     //run_deadlock_test();
 //    run_cond_wait_test();
