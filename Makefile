@@ -31,7 +31,7 @@ $(PROGRAM).so: $(OBJS)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so
 
 test-$(PROGRAM): *.c *.h
-	gcc $(CFLAGS) -g -O0 -o test-$(PROGRAM) *.c -lpthread
+	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -L. test.c -lpthread -lpthread_workqueue
 
 install: $(PROGRAM).so
 	$(INSTALL) -d -m 755 $(INCLUDEDIR)
@@ -53,7 +53,7 @@ uninstall:
 reinstall: uninstall install
  
 check: test-$(PROGRAM)
-	./test-$(PROGRAM)
+	LD_LIBRARY_PATH=. ./test-$(PROGRAM)
 
 valgrind: test-$(PROGRAM)
 	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
