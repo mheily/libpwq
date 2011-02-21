@@ -9,7 +9,7 @@ sources="src/pthread_workqueue.c"
 libdepends=""
 deps=""
 mans="pthread_workqueue.3"
-headers="pthread_workqueue.h"
+headers="include/pthread_workqueue.h"
 extra_dist="LICENSE"
 subdirs=""
 

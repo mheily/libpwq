@@ -35,22 +35,10 @@
 #include <string.h>
 
 #if defined(_WIN32)
-# define WIN32_LEAN_AND_MEAN
-# include <windows.h>
-# undef LIST_HEAD
-# include "./queue.h"
-typedef HANDLE pthread_t;
-typedef CRITICAL_SECTION pthread_spinlock_t;
-typedef CRITICAL_SECTION pthread_mutex_t;
+# include "windows/platform.h"
 #else
-# include <sys/resource.h>
-# include <sys/queue.h>
-# include <unistd.h>
-# include <pthread.h>
-# ifdef __sun
-#  include <sys/loadavg.h>
-# endif
-#endif /* POSIX */
+# include "posix/platform.h"
+#endif
 
 #include "pthread_workqueue.h"
 
@@ -69,17 +57,6 @@ static unsigned int get_process_limit(void);
 # define dbg_perror(str)         ;
 #endif 
 
-/* GCC atomic builtins. 
- * See: http://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html 
- */
-#ifdef __sun
-# include <atomic.h>
-# define atomic_inc      atomic_inc_32
-# define atomic_dec      atomic_dec_32
-#else
-# define atomic_inc(p)   __sync_add_and_fetch((p), 1)
-# define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
-#endif
 
 /* The total number of priority levels. */
 #define WORKQ_NUM_PRIOQUEUE 3
