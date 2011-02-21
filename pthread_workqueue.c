@@ -29,18 +29,27 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <pthread.h>
 #include <signal.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/resource.h>
-#include <sys/queue.h>
-#include <unistd.h>
-#ifdef __sun
-#include <sys/loadavg.h>
-#endif
+
+#if defined(_WIN32)
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
+# include "./queue.h"
+typedef HANDLE pthread_t;
+typedef CRITICAL_SECTION pthread_spinlock_t;
+
+#else
+# include <sys/resource.h>
+# include <sys/queue.h>
+# include <unistd.h>
+# include <pthread.h>
+# ifdef __sun
+#  include <sys/loadavg.h>
+# endif
+#endif /* POSIX */
 
 #include "pthread_workqueue.h"
 

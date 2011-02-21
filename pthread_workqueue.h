@@ -30,15 +30,12 @@
 #ifndef _PTHREAD_WORKQUEUE_H
 #define _PTHREAD_WORKQUEUE_H
 
-#include <pthread.h>
-#include <stdint.h>
-
 typedef struct _pthread_workqueue * pthread_workqueue_t;
 typedef void *                      pthread_workitem_handle_t;
 
 /* Pad size to 64 bytes. */
 typedef struct {
-   uint32_t sig;
+   unsigned int sig;
    int queueprio;
    int overcommit;
    unsigned int pad[13];
@@ -53,7 +50,9 @@ typedef struct {
 	extern "C" {
 #endif
 		
+#if !defined(_WIN32)
 int pthread_workqueue_init_np(void) __attribute__ ((constructor));
+#endif
 
 int pthread_workqueue_create_np(pthread_workqueue_t * workqp,
                const pthread_workqueue_attr_t * attr);
