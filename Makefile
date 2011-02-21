@@ -29,6 +29,7 @@ $(PROGRAM).a: $(OBJS)
 $(PROGRAM).so: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) $(LDADD)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so
+	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so.$(ABI_MAJOR)
 
 test-$(PROGRAM): *.c *.h
 	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -L. test.c -lpthread -lpthread_workqueue
