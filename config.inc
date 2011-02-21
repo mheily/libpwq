@@ -3,8 +3,8 @@ version="0.2"
 abi_major="0"
 abi_minor="0"
 abi_version="$abi_major.$abi_minor"
-cflags="-fpic -Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -m64 -I./include"
-ldflags="-m64 -shared"
+cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include"
+ldflags=""
 sources="src/pthread_workqueue.c"
 libdepends=""
 deps=""
@@ -29,5 +29,16 @@ pre_configure_hook() {
 }
 
 post_configure_hook() {
-    return
+    case "$target" in
+    windows)
+    	;;
+    solaris)
+    	ldflags="$ldflags -m64"
+    	cflags="$cflags -m64"
+	;;
+    solaris|linux)
+        cflags="$cflags -fpic"
+    	ldflags="$ldflags -shared"
+	;;
+    esac
 }

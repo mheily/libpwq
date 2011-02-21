@@ -186,8 +186,9 @@ check_target() {
 
 check_compiler() {
     printf "checking for a C compiler.. "
-    check_binary default_cc "/usr/bin/cc" "/usr/bin/gcc" "/usr/sfw/bin/gcc"
+    check_binary default_cc "/usr/bin/cc" "/usr/bin/gcc" "/usr/sfw/bin/gcc" "`which gcc`"
     finalize cc "$default_cc"
+    test -x "$cc" || err "Unable to locate a C compiler"
     echo "$cc"
 }
 
