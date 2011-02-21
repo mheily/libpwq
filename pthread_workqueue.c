@@ -37,10 +37,11 @@
 #if defined(_WIN32)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
+# undef LIST_HEAD
 # include "./queue.h"
 typedef HANDLE pthread_t;
 typedef CRITICAL_SECTION pthread_spinlock_t;
-
+typedef CRITICAL_SECTION pthread_mutex_t;
 #else
 # include <sys/resource.h>
 # include <sys/queue.h>
@@ -122,20 +123,12 @@ static unsigned int      worker_min;
 
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static pthread_mutex_t   wqlist_mtx;
+
+#if !defined(_WIN32)
 static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
 static pthread_cond_t    manager_init = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t   manager_mtx = PTHREAD_MUTEX_INITIALIZER;
-
-/*
-static pthread_once_t    init_once_control = 
-#if defined(__SUNPRO_C) || (defined(__sun) && defined(__clang__))
-                            { PTHREAD_ONCE_INIT };
-#else
-                              PTHREAD_ONCE_INIT;
-#endif
-*/
-
 static pthread_attr_t    detached_attr;
 
 static struct {
@@ -146,6 +139,7 @@ static struct {
     pthread_mutex_t sb_wake_mtx;
     pthread_cond_t  sb_wake_cond;
 } scoreboard;
+#endif
 
 /* The caller must hold the wqlist_mtx. */
 static struct work *
