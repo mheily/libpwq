@@ -115,7 +115,6 @@ static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static pthread_mutex_t   wqlist_mtx;
 static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
-static unsigned int      wqlist_work_counter;
 static pthread_cond_t    manager_init = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t   manager_mtx = PTHREAD_MUTEX_INITIALIZER;
 
@@ -129,6 +128,15 @@ static pthread_once_t    init_once_control =
 */
 
 static pthread_attr_t    detached_attr;
+
+static struct {
+    unsigned int    load,
+                    count,
+                    idle;
+    unsigned int    sb_wake_pending;
+    pthread_mutex_t sb_wake_mtx;
+    pthread_cond_t  sb_wake_cond;
+} scoreboard;
 
 /* The caller must hold the wqlist_mtx. */
 static struct work *
@@ -164,6 +172,7 @@ worker_main(void *arg)
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
 
+        atomic_inc(&scoreboard.idle);
         self->state = WORKER_STATE_SLEEPING;
         
         while ((witem = wqlist_scan()) == NULL)
@@ -172,13 +181,26 @@ worker_main(void *arg)
         if (witem->func == NULL) {
             dbg_puts("worker exiting..");
             self->state = WORKER_STATE_ZOMBIE;
+            atomic_dec(&scoreboard.idle);
             free(witem);
             pthread_exit(0);
         }
 
-        /* Invoke the callback function */
+        atomic_dec(&scoreboard.idle);
         self->state = WORKER_STATE_RUNNING;
-        atomic_dec(&wqlist_work_counter);
+
+        /* Force the manager thread to wakeup if all workers are busy */
+        dbg_printf("count=%u idle=%u wake_pending=%u", 
+            scoreboard.count, scoreboard.idle,  scoreboard.sb_wake_pending);
+        if (scoreboard.idle == 0 && !scoreboard.sb_wake_pending) {
+            dbg_puts("asking manager to wake up");
+            pthread_mutex_lock(&scoreboard.sb_wake_mtx);
+            scoreboard.sb_wake_pending = 1;
+            pthread_cond_signal(&scoreboard.sb_wake_cond);
+            pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
+        }
+
+        /* Invoke the callback function */
         witem->func(witem->func_arg);
         free(witem);
     }
@@ -244,30 +266,24 @@ worker_stop(void)
 static void *
 manager_main(void *unused)
 {
-    struct worker *wkr;
+    //struct worker *wkr;
     unsigned int load_max = cpu_count * 2;
     unsigned int worker_max;
     int i;
     sigset_t sigmask, oldmask;
-    struct {
-        unsigned int load,
-                     count,
-                     sleeping,
-                     running;
-    } st;
     
     worker_max = get_process_limit();
-    st.load = get_load_average();
+    scoreboard.load = get_load_average();
 
     /* Block all signals */
     sigfillset(&sigmask);
     pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);
 
     /* Create the minimum number of workers */
-    st.count = 0;
+    scoreboard.count = 0;
     for (i = 0; i < worker_min; i++) {
         worker_start();
-        st.count++;
+        scoreboard.count++;
     }
 
     pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
@@ -276,40 +292,50 @@ manager_main(void *unused)
 
     for (;;) {
 
-        dbg_printf("load=%u work_count=%u workers=%u max_workers=%u",
-                   st.load, wqlist_work_counter, st.count, worker_max
+        dbg_printf("load=%u idle=%u workers=%u max_workers=%u",
+                   scoreboard.load, scoreboard.idle, scoreboard.count, worker_max
                 );
 
+#if DEADWOOD
         /* Examine each worker and update statistics */
-        st.sleeping = 0;
-        st.running = 0;
+        scoreboard.sleeping = 0;
+        scoreboard.running = 0;
         LIST_FOREACH(wkr, &workers, entries) {
             switch (wkr->state) {
                 case WORKER_STATE_SLEEPING:
-                    st.sleeping++;
+                    scoreboard.sleeping++;
                     break;
 
                 case WORKER_STATE_RUNNING:
-                    st.running++;
+                    scoreboard.running++;
                     /* TODO: check for stalled worker */
                     break;
 
                 case WORKER_STATE_ZOMBIE:
                     LIST_REMOVE(wkr, entries);
-                    st.count--;
+                    scoreboard.count--;
                     free(wkr);
                     break;
             }
         }
+#endif
 
-        if (st.sleeping == 0) {
-            st.load = get_load_average();
-            if (st.load < load_max) {
+        dbg_puts("manager is sleeping");
+        pthread_mutex_lock(&scoreboard.sb_wake_mtx);
+        pthread_cond_wait(&scoreboard.sb_wake_cond, &scoreboard.sb_wake_mtx);
+        
+        dbg_puts("manager is awake");
+
+        if (scoreboard.idle == 0) {
+            scoreboard.load = get_load_average();
+            if (scoreboard.load < load_max) {
                 dbg_puts("All workers are busy, spawning another worker");
                 if (worker_start() == 0)
-                    st.count++;
+                    scoreboard.count++;
             }
         }
+        scoreboard.sb_wake_pending = 0;
+        pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
 
 #if DEADWOOD
         /* Check if there is too much work and not enough workers */
@@ -369,7 +395,6 @@ manager_main(void *unused)
         }
 #endif
 
-        sleep(1);
     }
 
     /*NOTREACHED*/
@@ -457,6 +482,10 @@ pthread_workqueue_init_np(void)
     pthread_attr_init(&detached_attr);
     pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
 
+    /* Initialize the scoreboard */
+    pthread_cond_init(&scoreboard.sb_wake_cond, NULL);
+    pthread_mutex_init(&scoreboard.sb_wake_mtx, NULL);
+
     /* Determine the initial thread pool constraints */
     worker_min = cpu_count;
 
@@ -510,8 +539,6 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 {
     struct work *witem;
     
-    dbg_puts("entering additem...");
-
     if (valid_workq(workq) == 0)
         return (EINVAL);
 
@@ -537,8 +564,6 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 
     pthread_cond_signal(&wqlist_has_work);
     pthread_mutex_unlock(&wqlist_mtx);
-
-    atomic_inc(&wqlist_work_counter);
 
     if (itemhandlep != NULL)
         *itemhandlep = (pthread_workitem_handle_t *) witem;

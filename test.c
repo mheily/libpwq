@@ -136,7 +136,7 @@ int main() {
     printf("pthread_workqueue_create_np().. ");
     rv = pthread_workqueue_create_np(&wq, NULL);
     if (rv != 0)
-        errx(1, "failed", strerror(rv));
+        err(1, "failed");
     printf("ok\n");
 
     printf("stress test.. ");

@@ -1,6 +1,20 @@
 #!/bin/sh
 #
-# TODO: backport 'distfile' to ./configure trunk
+# Copyright (c) 2009-2010 Mark Heily <mark@heily.com>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
 
 c_exports="program version target cflags"
 
@@ -90,6 +104,24 @@ check_header() {
    fi
 }
 
+# Determine the path to an executable binary
+check_binary() {
+   id=$1
+   shift
+
+   for path in $*
+   do
+       test -f $path
+       if [ $? = 0 ] ; then
+           eval "$id=\"$path\""
+           return
+       fi
+   done
+
+   echo "not found"
+   return
+}
+
 check_headers() {	 
    for header in $*
    do
@@ -144,31 +176,22 @@ check_target() {
     if [ "$default_target" = "sunos" ] ; then
        default_target="solaris"
     fi
+    if [ "$default_target" = "gnu/kfreebsd" ] ; then
+       default_target="freebsd"
+    fi
     finalize target "$default_target"
     echo "$target"
 }
 
 check_compiler() {
     printf "checking for a C compiler.. "
-    if [ "`uname -s`" = "SunOS" ] ; then
-       default_cc="/usr/sfw/bin/gcc"
-    else
-       default_cc="/usr/bin/cc"
-    fi
+    check_binary default_cc "/usr/bin/cc" "/usr/bin/gcc" "/usr/sfw/bin/gcc"
     finalize cc "$default_cc"
     echo "$cc"
 }
 
 check_linker() {
     printf "checking for a suitable linker.. "
-
-    # Disabled due to problems with ld(1) under Linux
-    #if [ "`uname -s`" = "SunOS" ] ; then
-    #   default_ld="/usr/sfw/bin/gld"
-    #else
-    #   default_ld="/usr/bin/ld"
-    #fi
-    #ldflags="-shared -export-dynamic -soname $program.so $ldflags"
 
     # Workaround for "hidden symbol <foo> is referenced by DSO" linker error
     # seen when compiling libdispatch.
@@ -179,11 +202,11 @@ check_linker() {
 
     # FIXME: port to solaris
     if [ "$target" = "linux" ] ; then
-    ldflags="-shared $ldflags -Wl,-export-dynamic -Wl,-soname,$program.so.$abi_major"
+    ldflags="$ldflags -Wl,-export-dynamic -Wl,-soname,$program.so.$abi_major"
     fi 
 
     if [ "$target" = "solaris" ] ; then
-    ldflags="-shared $ldflags"
+    ldflags="$ldflags"
     fi
 
     finalize ld "$default_ld"
@@ -192,7 +215,7 @@ check_linker() {
 
 check_archiver() {
     printf "checking for a suitable archiver.. "
-    if [ "`uname -s`" = "SunOS" ] ; then
+    if [ "`uname -s`" = "SunOS" -a "`uname -v | grep Nexenta`" = "" ] ; then
        default_ar="/usr/sfw/bin/gar"
     else
        default_ar="/usr/bin/ar"
@@ -225,6 +248,7 @@ subst_vars() {
   echo "Creating $outfile"
   rm -f $outfile
   sed -e "
+       s,@@CWD@@,`pwd`,g;
        s,@@PROGRAM@@,$program,g;
        s,@@VERSION@@,$version,g;
        s,@@PREFIX@@,$prefix,g;
@@ -233,8 +257,8 @@ subst_vars() {
        s,@@MANDIR@@,$mandir,g;
        s,@@LIBDEPENDS@@,$libdepends,g;
        s,@@PKG_SUMMARY@@,$pkg_summary,g;
-       s,@@PKG_DESCRIPTION@@,$pkg_description,g;
        s,@@RPM_DATE@@,`date +'%a %b %d %Y'`,g;
+       s,@@PKG_DESCRIPTION@@,$pkg_description,g;
        s,@@LICENSE@@,$license,g;
        s,@@AUTHOR@@,$author,g;
        " < ${outfile}.in > $outfile
@@ -288,7 +312,7 @@ finalize ldadd      ""
 finalize ldflags    ""
 finalize deps       ""
 finalize ln         "`which ln`"
-finalize distfile   "$program-$version.tar.gz"
+finalize distfile   "$program-$version.tar.gz" 
 
 pre_configure_hook
 
@@ -311,5 +335,3 @@ export_to_c $c_exports
 
 echo "Creating config.mk"
 export_to_make "$make_exports"
-
-make clean >/dev/null 2>&1
