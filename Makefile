@@ -60,7 +60,7 @@ valgrind: test-$(PROGRAM)
 	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
 
 edit:
-	$(EDITOR) $(SOURCES) $(HEADERS)
+	$(EDITOR) `find ./ -name '*.c' -o -name '*.h'` Makefile
 
 $(PROGRAM)-$(VERSION).tar.gz: 
 	mkdir $(PROGRAM)-$(VERSION)

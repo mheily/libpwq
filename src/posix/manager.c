@@ -27,71 +27,15 @@
  *
  */
 
-#include <errno.h>
-#include <limits.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#if defined(_WIN32)
-# include "windows/platform.h"
-#else
-# include "posix/platform.h"
-#endif
-
+#include "platform.h"
+#include "private.h"
 #include "pthread_workqueue.h"
 
 /* Function prototypes */
 static unsigned int get_load_average(void);
 static void * worker_main(void *arg);
 static unsigned int get_process_limit(void);
-
-#ifdef PTHREAD_WORKQUEUE_DEBUG
-# define dbg_puts(str)           fprintf(stderr, "%s(): %s\n", __func__,str)
-# define dbg_printf(fmt,...)     fprintf(stderr, "%s(): "fmt"\n", __func__,__VA_ARGS__)
-# define dbg_perror(str)         fprintf(stderr, "%s(): %s: %s\n", __func__,str, strerror(errno))
-#else
-# define dbg_puts(str)           ;
-# define dbg_printf(fmt,...)     ;
-# define dbg_perror(str)         ;
-#endif 
-
-
-/* The total number of priority levels. */
-#define WORKQ_NUM_PRIOQUEUE 3
-
-/* Signatures/magic numbers.  */
-#define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
-#define PTHREAD_WORKQUEUE_ATTR_SIG  0xBEBEBEBE 
-
-struct work {
-    STAILQ_ENTRY(work)   item_entry; 
-    void               (*func)(void *);
-    void                *func_arg;
-    unsigned int         flags;
-    unsigned int         gencount;
-};
-
-struct worker {
-    LIST_ENTRY(worker)   entries;
-    pthread_t            tid;
-    enum {
-        WORKER_STATE_SLEEPING,
-        WORKER_STATE_RUNNING,
-        WORKER_STATE_ZOMBIE,
-    } state;
-};
-
-struct _pthread_workqueue {
-    unsigned int         sig;    /* Unique signature for this structure */
-    unsigned int         flags;
-    int                  queueprio;
-    int                  overcommit;
-    LIST_ENTRY(_pthread_workqueue) wqlist_entry;
-    STAILQ_HEAD(,work)   item_listhead;
-    pthread_spinlock_t   mtx;
-};
+static void manager_start(void);
 
 static unsigned int      cpu_count;
 
@@ -101,10 +45,9 @@ static unsigned int      worker_min;
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static pthread_mutex_t   wqlist_mtx;
 
-#if !defined(_WIN32)
 static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
-static pthread_cond_t    manager_init = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t    manager_init_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t   manager_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_attr_t    detached_attr;
 
@@ -116,7 +59,43 @@ static struct {
     pthread_mutex_t sb_wake_mtx;
     pthread_cond_t  sb_wake_cond;
 } scoreboard;
-#endif
+
+int
+manager_init(void)
+{
+    int i;
+
+    LIST_INIT(&workers);
+    pthread_mutex_init(&wqlist_mtx, NULL);
+    for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++)
+        LIST_INIT(&wqlist[i]);
+
+    cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
+
+    pthread_attr_init(&detached_attr);
+    pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
+
+    /* Initialize the scoreboard */
+    pthread_cond_init(&scoreboard.sb_wake_cond, NULL);
+    pthread_mutex_init(&scoreboard.sb_wake_mtx, NULL);
+
+    /* Determine the initial thread pool constraints */
+    worker_min = cpu_count;
+
+    manager_start();
+
+    pthread_cond_wait(&manager_init_cond, &manager_mtx);
+    pthread_mutex_unlock(&manager_mtx);
+    return (0);
+}
+
+void
+manager_workqueue_create(struct _pthread_workqueue *workq)
+{
+    pthread_mutex_lock(&wqlist_mtx);
+    LIST_INSERT_HEAD(&wqlist[workq->queueprio], workq, wqlist_entry);
+    pthread_mutex_unlock(&wqlist_mtx);
+}
 
 /* The caller must hold the wqlist_mtx. */
 static struct work *
@@ -268,7 +247,7 @@ manager_main(void *unused)
 
     pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
 
-    pthread_cond_signal(&manager_init);
+    pthread_cond_signal(&manager_init_cond);
 
     for (;;) {
 
@@ -403,13 +382,21 @@ manager_start(void)
     wqlist_has_manager = 1;
 }
 
-static int
-valid_workq(pthread_workqueue_t workq) 
+void
+manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 {
-    if (workq->sig == PTHREAD_WORKQUEUE_SIG)
-        return (1);
-    else
-        return (0);
+    /* TODO: possibly use a separate mutex or some kind of atomic CAS */
+    pthread_mutex_lock(&wqlist_mtx);
+
+    if (!wqlist_has_manager)
+        manager_start();
+
+    pthread_spin_lock(&workq->mtx);
+    STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
+    pthread_spin_unlock(&workq->mtx);
+
+    pthread_cond_signal(&wqlist_has_work);
+    pthread_mutex_unlock(&wqlist_mtx);
 }
 
 
@@ -445,214 +432,4 @@ get_load_average(void)
         loadavg = 1;
 
     return ((int) loadavg);
-}
-
-/*
- * Public API
- */
-
-int __attribute__ ((constructor))
-pthread_workqueue_init_np(void)
-{
-    LIST_INIT(&workers);
-    pthread_mutex_init(&wqlist_mtx, NULL);
-
-    cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
-
-    pthread_attr_init(&detached_attr);
-    pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
-
-    /* Initialize the scoreboard */
-    pthread_cond_init(&scoreboard.sb_wake_cond, NULL);
-    pthread_mutex_init(&scoreboard.sb_wake_mtx, NULL);
-
-    /* Determine the initial thread pool constraints */
-    worker_min = cpu_count;
-
-    manager_start();
-
-    pthread_cond_wait(&manager_init, &manager_mtx);
-    pthread_mutex_unlock(&manager_mtx);
-
-    dbg_puts("pthread_workqueue library initialized");
-    return (0);
-}
-
-int
-pthread_workqueue_create_np(pthread_workqueue_t *workqp,
-                            const pthread_workqueue_attr_t * attr)
-{
-    pthread_workqueue_t workq;
-
-    if ((attr != NULL) && ((attr->sig != PTHREAD_WORKQUEUE_ATTR_SIG) ||
-         (attr->queueprio < 0) || (attr->queueprio > WORKQ_NUM_PRIOQUEUE)))
-        return (EINVAL);
-    if ((workq = calloc(1, sizeof(*workq))) == NULL)
-        return (ENOMEM);
-    workq->sig = PTHREAD_WORKQUEUE_SIG;
-    workq->flags = 0;
-    STAILQ_INIT(&workq->item_listhead);
-    pthread_spin_init(&workq->mtx, PTHREAD_PROCESS_PRIVATE);
-    if (attr == NULL) {
-        workq->queueprio = WORKQ_DEFAULT_PRIOQUEUE;
-        workq->overcommit = 0;
-    } else {
-        workq->queueprio = attr->queueprio;
-        workq->overcommit = attr->overcommit;
-    }
-
-    pthread_mutex_lock(&wqlist_mtx);
-    LIST_INSERT_HEAD(&wqlist[workq->queueprio], workq, wqlist_entry);
-    pthread_mutex_unlock(&wqlist_mtx);
-
-    dbg_printf("created queue %p", workq);
-
-    *workqp = workq;
-    return (0);
-}
-
-int
-pthread_workqueue_additem_np(pthread_workqueue_t workq,
-                     void (*workitem_func)(void *), void * workitem_arg,
-                     pthread_workitem_handle_t * itemhandlep, 
-                     unsigned int *gencountp)
-{
-    struct work *witem;
-    
-    if (valid_workq(workq) == 0)
-        return (EINVAL);
-
-    /* TODO: Keep a free list to avoid frequent malloc/free() penalty */
-    witem = malloc(sizeof(*witem));
-    if (witem == NULL)
-        return (ENOMEM);
-    witem->gencount = 0;
-    witem->func = workitem_func;
-    witem->func_arg = workitem_arg;
-    witem->flags = 0;
-    witem->item_entry.stqe_next = 0;
-
-    /* TODO: possibly use a separate mutex or some kind of atomic CAS */
-    pthread_mutex_lock(&wqlist_mtx);
-
-    if (!wqlist_has_manager)
-        manager_start();
-
-    pthread_spin_lock(&workq->mtx);
-    STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
-    pthread_spin_unlock(&workq->mtx);
-
-    pthread_cond_signal(&wqlist_has_work);
-    pthread_mutex_unlock(&wqlist_mtx);
-
-    if (itemhandlep != NULL)
-        *itemhandlep = (pthread_workitem_handle_t *) witem;
-    if (gencountp != NULL)
-        *gencountp = witem->gencount;
-
-    dbg_printf("added an item to queue %p", workq);
-
-    return (0);
-}
-
-int
-pthread_workqueue_attr_init_np(pthread_workqueue_attr_t *attr)
-{
-    attr->queueprio = WORKQ_DEFAULT_PRIOQUEUE;
-    attr->sig = PTHREAD_WORKQUEUE_ATTR_SIG;
-    attr->overcommit = 0;
-    return (0);
-}
-
-int
-pthread_workqueue_attr_destroy_np(pthread_workqueue_attr_t *attr)
-{
-    if (attr->sig == PTHREAD_WORKQUEUE_ATTR_SIG)
-        return (0);
-    else
-        return (EINVAL); /* Not an attribute struct. */
-}
-
-int
-pthread_workqueue_attr_getovercommit_np(
-        const pthread_workqueue_attr_t *attr, int *ocommp)
-{
-    if (attr->sig == PTHREAD_WORKQUEUE_ATTR_SIG) {
-        *ocommp = attr->overcommit;
-        return (0);
-    } else 
-        return (EINVAL); /* Not an attribute struct. */
-}
-
-int
-pthread_workqueue_attr_setovercommit_np(pthread_workqueue_attr_t *attr,
-                           int ocomm)
-{
-    if (attr->sig == PTHREAD_WORKQUEUE_ATTR_SIG) {
-        attr->overcommit = ocomm;
-        return (0);
-    } else
-        return (EINVAL);
-}
-
-int
-pthread_workqueue_attr_getqueuepriority_np(
-        pthread_workqueue_attr_t *attr, int *qpriop)
-{
-    if (attr->sig == PTHREAD_WORKQUEUE_ATTR_SIG) {
-        *qpriop = attr->queueprio;
-        return (0);
-    } else 
-        return (EINVAL);
-}
-
-int 
-pthread_workqueue_attr_setqueuepriority_np(
-        pthread_workqueue_attr_t *attr, int qprio)
-{
-    if (attr->sig == PTHREAD_WORKQUEUE_ATTR_SIG) {
-        switch(qprio) {
-            case WORKQ_HIGH_PRIOQUEUE:
-            case WORKQ_DEFAULT_PRIOQUEUE:
-            case WORKQ_LOW_PRIOQUEUE:
-                attr->queueprio = qprio;
-                return (0);
-            default:
-                return (EINVAL);
-        }
-    } else
-        return (EINVAL);
-}
-
-/*
- * Does not exist in the Apple implementation, but needed on Linux
- * due to a kernel bug that causes the process to become a zombie when
- * the main thread calls pthread_exit().
- *
- * More info:
- *   http://www.0x61.com/forum/viewtopic.php?f=109&t=997736&view=next
- */
-void
-pthread_workqueue_main_np(void)
-{
-
-    //TESTING - dispatch testsuite requires this..
-    pthread_exit(0);
-
-    /* 
-    struct worker w;
-    pthread_mutex_lock(&wqlist_mtx);
-    if (wqlist_has_manager) {
-        pthread_mutex_unlock(&wqlist_mtx);
-        dbg_puts("running as a worker");
-        memset(&w, 0, sizeof(w));
-        worker_main(&w);
-    } else {
-        wqlist_has_manager = 1;
-        pthread_mutex_unlock(&wqlist_mtx);
-
-        dbg_puts("running as a manager");
-        manager_main(NULL);
-    }
-    */
 }

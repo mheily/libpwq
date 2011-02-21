@@ -129,10 +129,6 @@ run_stress_test(int rounds)
 int main() {
     int rv;
 
-    printf("pthread_workqueue_init_np().. ");
-    pthread_workqueue_init_np();
-    printf("ok\n");
-
     printf("pthread_workqueue_create_np().. ");
     rv = pthread_workqueue_create_np(&wq, NULL);
     if (rv != 0)

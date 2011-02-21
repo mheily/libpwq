@@ -50,10 +50,6 @@ typedef struct {
 	extern "C" {
 #endif
 		
-#if !defined(_WIN32)
-int pthread_workqueue_init_np(void) __attribute__ ((constructor));
-#endif
-
 int pthread_workqueue_create_np(pthread_workqueue_t * workqp,
                const pthread_workqueue_attr_t * attr);
 

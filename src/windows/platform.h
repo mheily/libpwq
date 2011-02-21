@@ -6,7 +6,7 @@
 #include <windows.h>
 
 #undef LIST_HEAD
-#include "../queue.h"
+#include "queue.h"
 
 typedef HANDLE pthread_t;
 

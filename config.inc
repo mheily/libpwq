@@ -3,11 +3,11 @@ version="0.2"
 abi_major="0"
 abi_minor="0"
 abi_version="$abi_major.$abi_minor"
-cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include"
+cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include -I./src"
 ldflags=""
-sources="src/pthread_workqueue.c"
+sources="src/api.c"
 libdepends=""
-deps=""
+deps="src/*.h"
 mans="pthread_workqueue.3"
 headers="include/pthread_workqueue.h"
 extra_dist="LICENSE"
@@ -29,13 +29,14 @@ pre_configure_hook() {
 }
 
 post_configure_hook() {
+    sources="$sources src/posix/manager.c"
     case "$target" in
     windows)
     	;;
     solaris)
     	ldflags="$ldflags -m64"
     	cflags="$cflags -m64"
-	;;
+	    ;;
     solaris|linux)
         cflags="$cflags -fpic"
     	ldflags="$ldflags -shared"
