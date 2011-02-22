@@ -45,7 +45,7 @@
 
 #include "pthread_workqueue.h"
 
-#define PTHREAD_WORKQUEUE_DEBUG 1
+// #define PTHREAD_WORKQUEUE_DEBUG 1
 #ifdef PTHREAD_WORKQUEUE_DEBUG
 # define dbg_puts(str)           fprintf(stderr, "%s(): %s\n", __func__,str)
 # define dbg_printf(fmt,...)     fprintf(stderr, "%s(): "fmt"\n", __func__,__VA_ARGS__)
