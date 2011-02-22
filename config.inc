@@ -5,7 +5,7 @@ abi_minor="0"
 abi_version="$abi_major.$abi_minor"
 cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include -I./src"
 ldflags=""
-sources='src/api.c src/$(API)/manager.c'
+sources='src/api.c src/$(API)/manager.c src/witem_cache.c'
 libdepends=""
 deps="src/*.h"
 mans="pthread_workqueue.3"

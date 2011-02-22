@@ -248,7 +248,7 @@ static void *_wait_for_all_events(void *t)
 	}
 
     real_end = gettime();
-    
+    sleep(10);
     my_sleep(EVENT_TIME_SLICE * 2); // allow processing to finish, should use a semaphore really
     
 	printf("Collecting statistics...\n");

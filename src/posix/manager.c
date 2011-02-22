@@ -70,6 +70,8 @@ manager_init(void)
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++)
         LIST_INIT(&wqlist[i]);
 
+    pthread_key_create(&witem_cache_key, witem_cache_cleanup);
+
     cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
 
     pthread_attr_init(&detached_attr);
@@ -141,7 +143,7 @@ worker_main(void *arg)
             dbg_puts("worker exiting..");
             self->state = WORKER_STATE_ZOMBIE;
             atomic_dec(&scoreboard.idle);
-            free(witem);
+            witem_free(witem);
             pthread_exit(0);
         }
 
@@ -161,7 +163,7 @@ worker_main(void *arg)
 
         /* Invoke the callback function */
         witem->func(witem->func_arg);
-        free(witem);
+        witem_free(witem);
     }
     /* NOTREACHED */
     return (NULL);
@@ -198,9 +200,10 @@ worker_stop(void)
     pthread_workqueue_t workq;
     int i;
 
-    witem = calloc(1, sizeof(*witem));
-    if (witem == NULL)
-        return (-1);
+    witem = fastpath(witem_alloc_cacheonly());
+    if (!witem)
+        witem = fastpath(witem_alloc_from_heap());
+    memset(witem, 0, sizeof(*witem));
 
     pthread_mutex_lock(&wqlist_mtx);
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++) {

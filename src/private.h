@@ -63,12 +63,24 @@
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
 #define PTHREAD_WORKQUEUE_ATTR_SIG  0xBEBEBEBE 
 
+#if __GNUC__
+#define fastpath(x)     ((__typeof__(x))__builtin_expect((long)(x), ~0l))
+#define slowpath(x)     ((__typeof__(x))__builtin_expect((long)(x), 0l))
+#else
+#define fastpath(x) (x)
+#define slowpath(x) (x)
+#endif
+
+#define CACHELINE_SIZE	64
+#define ROUND_UP_TO_CACHELINE_SIZE(x)	(((x) + (CACHELINE_SIZE - 1)) & ~(CACHELINE_SIZE - 1))
+
 struct work {
     STAILQ_ENTRY(work)   item_entry; 
     void               (*func)(void *);
     void                *func_arg;
     unsigned int         flags;
     unsigned int         gencount;
+	struct work *volatile wi_next;
 };
 
 struct worker {
@@ -94,5 +106,12 @@ struct _pthread_workqueue {
 int manager_init(void);
 void manager_workqueue_create(struct _pthread_workqueue *);
 void manager_workqueue_additem(struct _pthread_workqueue *, struct work *);
+
+extern pthread_key_t witem_cache_key;
+
+struct work *witem_alloc_from_heap(void);
+struct work *witem_alloc_cacheonly();
+void witem_free(struct work *wi);
+void witem_cache_cleanup(void *value);
 
 #endif  /* _PTWQ_PRIVATE_H */

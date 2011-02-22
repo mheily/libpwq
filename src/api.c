@@ -90,10 +90,10 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
     if (valid_workq(workq) == 0)
         return (EINVAL);
 
-    /* TODO: Keep a free list to avoid frequent malloc/free() penalty */
-    witem = malloc(sizeof(*witem));
-    if (witem == NULL)
-        return (ENOMEM);
+    witem = fastpath(witem_alloc_cacheonly());
+    if (slowpath(witem == NULL))
+        witem = witem_alloc_from_heap();
+
     witem->gencount = 0;
     witem->func = workitem_func;
     witem->func_arg = workitem_arg;
