@@ -38,7 +38,7 @@ valid_workq(pthread_workqueue_t workq)
         return (0);
 }
 
-static int __attribute__ ((constructor))
+static int CONSTRUCTOR
 pthread_workqueue_init_np(void)
 {
     if (manager_init() < 0)
@@ -194,7 +194,9 @@ pthread_workqueue_main_np(void)
 {
 
     //TESTING - dispatch testsuite requires this..
-    pthread_exit(0);
+#ifndef _WIN32
+	pthread_exit(0);
+#endif
 
     /* 
     struct worker w;

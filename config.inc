@@ -3,8 +3,8 @@ version="0.2"
 abi_major="0"
 abi_minor="0"
 abi_version="$abi_major.$abi_minor"
-cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include -I./src"
-ldflags=""
+cflags="-shared -Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include -I./src"
+ldflags="-shared"
 sources="src/api.c"
 libdepends=""
 deps="src/*.h"
@@ -29,9 +29,12 @@ pre_configure_hook() {
 }
 
 post_configure_hook() {
-    sources="$sources src/posix/manager.c"
+    cflags="$cflags"
     case "$target" in
-    windows)
+    mingw*)
+        cflags="$cflags -mthreads"
+        ldflags="$ldflags -mthreads"
+        sources="$sources src/windows/manager.c"
     	;;
     solaris)
     	ldflags="$ldflags -m64"
@@ -39,7 +42,7 @@ post_configure_hook() {
 	    ;;
     solaris|linux)
         cflags="$cflags -fpic"
-    	ldflags="$ldflags -shared"
+    	ldflags="$ldflags"
 	;;
     esac
 }

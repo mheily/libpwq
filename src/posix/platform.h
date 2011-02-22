@@ -22,4 +22,6 @@
 # define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #endif
 
+#define CONSTRUCTOR __attribute__ ((constructor))
+
 #endif  /* _PTWQ_POSIX_PLATFORM_H */

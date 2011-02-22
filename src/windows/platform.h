@@ -1,12 +1,22 @@
 #ifndef _PTWQ_WINDOWS_PLATFORM_H
 #define _PTWQ_WINDOWS_PLATFORM_H 1
 
+#define _WIN32_WINNT 0x0500
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
 
+/* Instead of __attribute__ ((constructor)), use DllMain() */
+#define CONSTRUCTOR	  /* */
+
+# define __func__ __FUNCTION__
+
 #undef LIST_HEAD
 #include "queue.h"
+
+#define sleep(sec) 	Sleep(1000*sec)
+#define strdup(p)	_strdup(p)
+#define random()	rand()
 
 typedef HANDLE pthread_t;
 
