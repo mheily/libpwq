@@ -3,6 +3,7 @@
 
 #include <sys/resource.h>
 #include <sys/queue.h>
+#include <string.h>
 #include <unistd.h>
 #include <pthread.h>
 

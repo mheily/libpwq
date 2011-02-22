@@ -15,11 +15,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-makeconf_version="$Revision: 4 $"
+makeconf_version="$Revision: 10 $"
 
-c_exports="program version target cflags"
+c_exports="program version target api cflags"
 
-make_exports="program version target distfile \
+make_exports="program version target api distfile \
               prefix bindir sbindir libdir includedir mandir \
               cflags ldflags ldadd libdepends \
               sources objs deps mans headers extra_dist subdirs \
@@ -68,6 +68,10 @@ finalize() {
 process_argv() {
     for arg in $*
     do
+        if [ "$arg" = "--makeconf-version" ] ; then
+            echo $makeconf_version | sed 's/[^0-9.]//g'
+            exit 0
+        fi
         id=`echo "$arg" | sed 's/=.*//; s/^--//;'`
         val=`echo "$arg" | sed 's/^.*=//'`
         if [ "$val" = "" ] ; then val=1 ; fi
@@ -174,19 +178,27 @@ check_install() {
 check_target() {
     printf "checking operating system type.. "
     default_target=`uname -s | $tr '[:upper:]' '[:lower:]'`
-    if [ "$default_target" = "sunos" ] ; then
-       default_target="solaris"
-    fi
-    if [ "$default_target" = "gnu/kfreebsd" ] ; then
-       default_target="freebsd"
-    fi
+    default_api="posix"
+    case "$default_target" in
+    sunos)
+            default_target="solaris"
+            ;;
+    "gnu/kfreebsd")
+            default_target="freebsd"
+            ;;
+    "mingw*")
+            default_target="windows"
+            default_api="windows"
+            ;;
+    esac
     finalize target "$default_target"
-    echo "$target"
+    finalize api "$default_api"
+    echo "$api-$target"
 }
 
 check_compiler() {
     printf "checking for a C compiler.. "
-    check_binary default_cc "/usr/bin/cc" "/usr/bin/gcc" "/usr/sfw/bin/gcc" "`which gcc`"
+    check_binary default_cc "/usr/bin/cc" "/usr/bin/gcc" "/usr/sfw/bin/gcc" "`which gcc 2>/dev/null`"
     finalize cc "$default_cc"
     test -x "$cc" || err "Unable to locate a C compiler"
     echo "$cc"

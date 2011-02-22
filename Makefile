@@ -18,7 +18,7 @@
 
 include config.mk
 
-all: $(PROGRAM).dll
+all: $(PROGRAM).so
 
 %.dll: $(OBJS)
 	$(LD) -o $@ $(LDFLAGS) $(OBJS) $(LDADD)
@@ -35,7 +35,7 @@ $(PROGRAM).so: $(OBJS)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so.$(ABI_MAJOR)
 
 test-$(PROGRAM): *.c *.h
-	$(CC) -I./include -std=c99 -g -O0 -o test-$(PROGRAM) -L. test.c -lpthread -lpthread_workqueue
+	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -L. test.c -lpthread -lpthread_workqueue
 
 install: $(PROGRAM).so
 	$(INSTALL) -d -m 755 $(INCLUDEDIR)
@@ -58,6 +58,9 @@ reinstall: uninstall install
  
 check: test-$(PROGRAM)
 	LD_LIBRARY_PATH=. ./test-$(PROGRAM)
+
+debug: test-$(PROGRAM)
+	LD_LIBRARY_PATH=. gdb ./test-$(PROGRAM)
 
 valgrind: test-$(PROGRAM)
 	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)

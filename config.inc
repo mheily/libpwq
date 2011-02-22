@@ -5,7 +5,7 @@ abi_minor="0"
 abi_version="$abi_major.$abi_minor"
 cflags="-shared -Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -I./include -I./src"
 ldflags="-shared"
-sources="src/api.c"
+sources='src/api.c src/$(API)/manager.c'
 libdepends=""
 deps="src/*.h"
 mans="pthread_workqueue.3"
@@ -34,15 +34,10 @@ post_configure_hook() {
     mingw*)
         cflags="$cflags -mthreads"
         ldflags="$ldflags -mthreads"
-        sources="$sources src/windows/manager.c"
     	;;
-    solaris)
-    	ldflags="$ldflags -m64"
-    	cflags="$cflags -m64"
-	    ;;
     solaris|linux)
-        cflags="$cflags -fpic"
-    	ldflags="$ldflags"
+        cflags="$cflags -m64 -fpic"
+    	ldflags="$ldflags -m64 -fpic"
 	;;
     esac
 }
