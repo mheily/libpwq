@@ -38,7 +38,8 @@ valid_workq(pthread_workqueue_t workq)
         return (0);
 }
 
-static int CONSTRUCTOR
+// static - can't be static as this is checked for by libdispatch's configure
+int CONSTRUCTOR
 pthread_workqueue_init_np(void)
 {
     if (manager_init() < 0)
