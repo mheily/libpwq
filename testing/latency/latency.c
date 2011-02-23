@@ -27,67 +27,49 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#include "pthread_workqueue.h"
+#include "latency.h"
 
-// Run settings
-#define SECONDS_TO_RUN 10
-#define WORKQUEUE_COUNT 6
-#define GENERATOR_THREAD_COUNT 4
-#define SLEEP_BEFORE_START 0
-#define FORCE_BUSY_LOOP 0
-
-// Data rates
-// #define EVENTS_GENERATED_PER_TICK 25   // simulate some small bursting 
-// #define EVENT_GENERATION_FREQUENCY 1000  // events/s base rate, need to use busy loop = 1 if > 100Hz due to nanosleep resolution 
-
-#define EVENTS_GENERATED_PER_TICK 250   
-#define EVENT_GENERATION_FREQUENCY 100
-
-#define AGGREGATE_DATA_RATE_PER_SECOND (EVENT_GENERATION_FREQUENCY * EVENTS_GENERATED_PER_TICK)
-#define EVENTS_TO_GENERATE (SECONDS_TO_RUN * AGGREGATE_DATA_RATE_PER_SECOND)
-#define TOTAL_DATA_PER_SECOND (AGGREGATE_DATA_RATE_PER_SECOND*GENERATOR_THREAD_COUNT)
-
-#define NANOSECONDS_PER_SECOND 1000000000
-#define DISTRIBUTION_BUCKETS 20 // 1us per bucket
-#define EVENT_TIME_SLICE (NANOSECONDS_PER_SECOND / EVENT_GENERATION_FREQUENCY)
-#define SYSTEM_CLOCK_RESOLUTION 100
-
-typedef unsigned long mytime_t;
-
-struct wq_event 
-{
-	unsigned int queue_index; 
-	mytime_t start_time;
-};
-
-struct wq_statistics 
-{
-	unsigned int min; 
-	unsigned int max; 
-	double avg; 
-	unsigned int total; 
-	unsigned int count; 
-	unsigned int count_over_threshold; 
-    unsigned int distribution[DISTRIBUTION_BUCKETS];
-};
-
-struct wq_statistics workqueue_statistics[WORKQUEUE_COUNT]; 
 pthread_workqueue_t workqueues[WORKQUEUE_COUNT]; 
-pthread_t generator_threads[GENERATOR_THREAD_COUNT];
+struct wq_statistics workqueue_statistics[WORKQUEUE_COUNT]; 
+struct wq_event_generator workqueue_generator[GENERATOR_WORKQUEUE_COUNT];
 
 struct wq_statistics global_statistics;
 unsigned int global_stats_used = 0;
 
+pthread_mutex_t generator_mutex;
+pthread_cond_t generator_condition;
+static unsigned int events_processed;
+
 #define PERCENTILE_COUNT 8 
 double percentiles[PERCENTILE_COUNT] = {50.0, 80.0, 98.0, 99.0, 99.5, 99.8, 99.9, 99.99};
+mytime_t real_start, real_end;
+
+#ifdef __APPLE__
+
+#include <assert.h>
+#include <CoreServices/CoreServices.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+
+static mach_timebase_info_data_t    sTimebaseInfo;
+
+// From http://developer.apple.com/library/mac/#qa/qa2004/qa1398.html
+unsigned long gettime(void)
+{
+    return (mach_absolute_time() * sTimebaseInfo.numer / sTimebaseInfo.denom);
+}
+
+#else
 
 static unsigned long gettime(void)
 {
     struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
-        fprintf(stderr, "Failed to get monotonic clock! errno = %d\n", errno);   
+    if (clock_gettime(CLOCK_HIGHRES, &ts) != 0)
+        fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
     return ((ts.tv_sec * NANOSECONDS_PER_SECOND) + ts.tv_nsec);
 }
+
+#endif
 
 // real resolution on solaris is at best system clock tick, i.e. 100Hz unless having the
 // high res system clock (1000Hz in that case)
@@ -136,16 +118,87 @@ static void _process_data(void* context)
     else  
         workqueue_statistics[event->queue_index].distribution[DISTRIBUTION_BUCKETS-1] += 1;
 
-    // We zero these out to detect buffer overruns
-    event->start_time = 0;
-    event->queue_index = 0;
+    // allow generator thread to continue when all events have been processed
+    if (atomic_dec_nv(&events_processed) == 0)
+    {
+        pthread_mutex_lock(&generator_mutex);
+        pthread_cond_signal(&generator_condition);
+        pthread_mutex_unlock(&generator_mutex);
+    }
+    return;
+}
+
+// Perform a small microburst for this tick
+static void _event_tick(void* context)
+{
+	struct wq_event *current_event;
+	long i, generator_workqueue = (long) context;
+    
+    for (i = 0; i < EVENTS_GENERATED_PER_TICK; i++)
+    {
+        current_event = &workqueue_generator[generator_workqueue].wq_events[i];
+        current_event->start_time = gettime();
+        current_event->queue_index = (current_event->start_time % WORKQUEUE_COUNT);
+        
+        (void) pthread_workqueue_additem_np(workqueues[current_event->queue_index], _process_data, current_event, NULL, NULL);
+    }
     
     return;
 }
 
-static void _gather_statistics(void* context)
+static void _generate_simulated_events()
 {
-	unsigned long queue_index = (unsigned long) context;
+	long i, tick, ticks_generated = 0, overhead;
+    mytime_t start, current, overhead_start = 0, overhead_end = 0;
+
+    start = current = gettime();
+
+	for (tick = 0; tick < TOTAL_TICKS_TO_RUN; tick++)
+	{
+        start = current = overhead_end;
+        overhead = overhead_end - overhead_start;
+        
+        // wait until we have waited proper amount of time for current rate
+        // we should remove overhead of previous lap to not lag behind in data rate
+        // one call to gethrtime() alone is around 211ns on Nehalem 2.93
+        // use busy waiting in case the frequency is higher than the supported resolution of nanosleep()
+
+        if (overhead > EVENT_TIME_SLICE)
+        {
+            printf("Warning: Event processing overhead > event time slice, readjust test parameters.\n");
+        }
+        else
+        if ((EVENT_GENERATION_FREQUENCY > SYSTEM_CLOCK_RESOLUTION) || FORCE_BUSY_LOOP)
+        {
+            while ((current - start) < (EVENT_TIME_SLICE - overhead))
+                current = gettime();            
+        }
+        else
+        {
+            my_sleep(EVENT_TIME_SLICE - overhead);
+        }
+        
+        overhead_start = gettime();
+        
+        events_processed = GENERATOR_WORKQUEUE_COUNT * EVENTS_GENERATED_PER_TICK; // number of items that will be processed
+        
+        for (i = 0; i < GENERATOR_WORKQUEUE_COUNT; i++)
+            (void) pthread_workqueue_additem_np(workqueue_generator[i].wq, _event_tick, (void *) i, NULL, NULL);
+        
+        // wait for all events to be processed
+        pthread_mutex_lock(&generator_mutex);
+        while (events_processed > 0)
+            pthread_cond_wait(&generator_condition, &generator_mutex);
+        pthread_mutex_unlock(&generator_mutex);
+
+        overhead_end = gettime();
+	}	
+
+	return;
+}
+
+static void _gather_statistics(unsigned long queue_index)
+{
     unsigned long i;
     
     if (workqueue_statistics[queue_index].count > 0)
@@ -165,97 +218,19 @@ static void _gather_statistics(void* context)
         for (i = 0; i < DISTRIBUTION_BUCKETS; i++)
             global_statistics.distribution[i] += workqueue_statistics[queue_index].distribution[i];
     }
-
+    
 	return;
 }
 
-static void *_generate_simulated_events(void *t)
-{
-	long i, current_event_index = 0, current_events_generated = 0, overhead;
-    mytime_t start, current, overhead_start = 0, overhead_end = 0;
-	struct wq_event *current_event;
-	struct wq_event *wq_events; // really used as a ring buffer without safety here, we should only do tests where consumer keep up...
-	
-	wq_events = malloc(sizeof(struct wq_event) * AGGREGATE_DATA_RATE_PER_SECOND);
-	memset(wq_events, 0, (sizeof(struct wq_event) * AGGREGATE_DATA_RATE_PER_SECOND));
-    
-	while (current_events_generated < EVENTS_TO_GENERATE)
-	{
-        start = current = gettime();
-        overhead = overhead_end - overhead_start;
-        
-        // wait until we have waited proper amount of time for current rate
-        // we should remove overhead of previous lap to not lag behind in data rate
-        // one call to gethrtime() alone is around 211ns on Nehalem 2.93
-        // use busy waiting in case the frequency is higher than the supported resolution of nanosleep()
-        
-        if ((EVENT_GENERATION_FREQUENCY > SYSTEM_CLOCK_RESOLUTION) || FORCE_BUSY_LOOP)
-        {
-            while ((current - start) < (EVENT_TIME_SLICE - overhead))
-                current = gettime();            
-        }
-        else
-        {
-            my_sleep(EVENT_TIME_SLICE - overhead);
-        }
-        
-        overhead_start = gettime();
-
-		// Perform a small microburst for this tick
-		for (i = 0; (i < EVENTS_GENERATED_PER_TICK) && (current_events_generated < EVENTS_TO_GENERATE); i++, current_events_generated++)
-		{
-			current_event = &wq_events[current_event_index++];
-            
-            // We use wq_events as a simple ring buffer, just check we are not overrunning
-            // the processing here, should not happen during normal load tests unless long time is spent in the processing
-            if ((current_event->start_time != 0) || (current_event->queue_index != 0))
-            {
-                fprintf(stderr, "wq_events overrun, %ld, %ld, %ld, reconfigure test with different parameters.\n", i, current_event->start_time, current_event->queue_index);
-
-                while ((current_event->start_time != 0) || (current_event->queue_index != 0)) // allow potential overrun to clear
-                    sleep(1);
-            }
-            
-			current_event->start_time = gettime();
-			current_event->queue_index = (current_event->start_time % WORKQUEUE_COUNT);
-
-            if (pthread_workqueue_additem_np(workqueues[current_event->queue_index], _process_data, current_event, NULL, NULL) != 0)
-                fprintf(stderr, "pthread_workqueue_additem_np failed\n");
-            
-			if (current_event_index == AGGREGATE_DATA_RATE_PER_SECOND)
-				current_event_index = 0;
-		}
-
-        overhead_end = gettime();
-	}	
-
-	return (void *) current_events_generated;
-}
-
-// joins the generator threads when we are ready to print statistics
-static void *_wait_for_all_events(void *t)
+void _print_statistics()
 {
 	unsigned long i, j, total_events = 0, last_percentile = 0, accumulated_percentile = 0;
 	void *events_done;
-	mytime_t real_start, real_end;
-    
-	real_start = gettime();
-    
-	for (i=0; i<GENERATOR_THREAD_COUNT; i++)
-	{
-		(void) pthread_join(generator_threads[i], &events_done);
-		total_events += (unsigned long) events_done;
-	}
-
-    real_end = gettime();
-    sleep(10);
-    my_sleep(EVENT_TIME_SLICE * 2); // allow processing to finish, should use a semaphore really
-    
+        
 	printf("Collecting statistics...\n");
 	
 	for (i = 0; i < WORKQUEUE_COUNT; i++)
-        if (pthread_workqueue_additem_np(workqueues[i], _gather_statistics, (void *) i, NULL, NULL) != 0)
-            fprintf(stderr, "pthread_workqueue_additem_np failed\n");
+        _gather_statistics(i);
     
 	printf("Test is done, run time was %.3f seconds, %.1fM events generated and processed.\n", (double)((double)(real_end - real_start) / (double) NANOSECONDS_PER_SECOND), total_events/1000000.0); 
 	
@@ -288,10 +263,8 @@ static void *_wait_for_all_events(void *t)
         printf("%.2f > %d us\n", percentiles[last_percentile], DISTRIBUTION_BUCKETS-1);
         last_percentile++;
     }
-    
-	exit(0);
-	
-	return NULL;
+
+	return;
 }	
 
 
@@ -300,10 +273,33 @@ int main(int argc, const char * argv[])
 	int i;
     pthread_workqueue_attr_t attr;
     
+#ifdef __APPLE__
+    (void) mach_timebase_info(&sTimebaseInfo);
+#endif
+    
 	memset(&workqueues, 0, sizeof(workqueues));
 	memset(&workqueue_statistics, 0, sizeof(workqueue_statistics));
 	memset(&global_statistics, 0, sizeof(global_statistics));
-	
+	memset(&workqueue_generator, 0, sizeof(workqueue_generator));
+
+    pthread_mutex_init(&generator_mutex, NULL);
+    pthread_cond_init(&generator_condition, NULL);
+    
+    if (pthread_workqueue_attr_init_np(&attr) != 0)
+        fprintf(stderr, "Failed to set workqueue attributes\n");
+    
+    if (pthread_workqueue_attr_setqueuepriority_np(&attr, WORKQ_HIGH_PRIOQUEUE) != 0) // high prio for generators
+        fprintf(stderr, "Failed to set workqueue priority\n");
+
+    for (i = 0; i < GENERATOR_WORKQUEUE_COUNT; i++)
+    {
+        workqueue_generator[i].wq_events = malloc(sizeof(struct wq_event) * EVENTS_GENERATED_PER_TICK);
+        memset(workqueue_generator[i].wq_events, 0, (sizeof(struct wq_event) * EVENTS_GENERATED_PER_TICK));
+        
+        if (pthread_workqueue_create_np(&workqueue_generator[i].wq, &attr) != 0)
+            fprintf(stderr, "Failed to create workqueue\n");
+    }
+    
 	for (i = 0; i < WORKQUEUE_COUNT; i++)
 	{
         if (pthread_workqueue_attr_init_np(&attr) != 0)
@@ -318,21 +314,24 @@ int main(int argc, const char * argv[])
     
 	if (SLEEP_BEFORE_START > 0)
 	{
-		printf("Sleeping for %d seconds to allow for processor set configuration.\n",SLEEP_BEFORE_START);
+		printf("Sleeping for %d seconds to allow for processor set configuration...\n",SLEEP_BEFORE_START);
 		sleep(SLEEP_BEFORE_START); 		
 	}
 	
     printf("%d workqueues, running for %d seconds at %d Hz, %d events per tick.\n",WORKQUEUE_COUNT, SECONDS_TO_RUN, EVENT_GENERATION_FREQUENCY, EVENTS_GENERATED_PER_TICK);
     
-	printf("Running %d generator threads at %dK events/s, the aggregated data rate is %dK events/s. %.2f MB is used for %.2fM events.\n",
-           GENERATOR_THREAD_COUNT,AGGREGATE_DATA_RATE_PER_SECOND/1000, TOTAL_DATA_PER_SECOND/1000,
-           GENERATOR_THREAD_COUNT * ((double)(sizeof(struct wq_event) * AGGREGATE_DATA_RATE_PER_SECOND + sizeof(workqueues))/(1024.0*1024.0)), 
-           GENERATOR_THREAD_COUNT * EVENTS_TO_GENERATE/1000000.0);
-    
-	for (i = 0; i < GENERATOR_THREAD_COUNT; i++)
-		(void) pthread_create(&generator_threads[i], NULL, _generate_simulated_events, NULL); 
+	printf("Running %d generator threads at %dK events/s, the aggregated data rate is %dK events/s. %.2f MB is used for %.2fK events.\n",
+           GENERATOR_WORKQUEUE_COUNT,AGGREGATE_DATA_RATE_PER_SECOND/1000, TOTAL_DATA_PER_SECOND/1000,
+           (double) GENERATOR_WORKQUEUE_COUNT * ((sizeof(struct wq_event) * EVENTS_GENERATED_PER_TICK + sizeof(workqueues))/(1024.0*1024.0)), 
+           GENERATOR_WORKQUEUE_COUNT * EVENTS_GENERATED_PER_TICK/1000.0);
 
-    _wait_for_all_events(NULL);
+    real_start = gettime();
+    
+    _generate_simulated_events();
+
+    real_end = gettime();
+
+    _print_statistics();
         
 	return 0;
 }

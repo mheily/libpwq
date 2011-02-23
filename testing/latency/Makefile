@@ -3,8 +3,12 @@ CC=gcc
 latency:
 	$(CC) -m64 -I../../include -L../.. -R../.. -o latency latency.c -lpthread -lrt -lpthread_workqueue
 
+macosx:
+	$(CC) -m64 -I../../include -L../.. -R../.. -o latencym latency.c -lpthread
+
 check: latency
 	./latency
 
 clean:
 	rm -f latency
+	rm -f latencym
