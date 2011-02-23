@@ -129,6 +129,8 @@ worker_main(void *arg)
 {
     struct worker *self = (struct worker *) arg;
     struct work *witem;
+    void (*func)(void *);
+    void *func_arg;
 
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
@@ -161,9 +163,12 @@ worker_main(void *arg)
             pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
         }
 
-        /* Invoke the callback function */
-        witem->func(witem->func_arg);
+        /* Invoke the callback function, free witem first for possible reuse */
+        func = witem->func;
+        func_arg = witem->func_arg;
         witem_free(witem);
+        
+        func(func_arg);
     }
     /* NOTREACHED */
     return (NULL);

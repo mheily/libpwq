@@ -73,6 +73,7 @@
 
 #define CACHELINE_SIZE	64
 #define ROUND_UP_TO_CACHELINE_SIZE(x)	(((x) + (CACHELINE_SIZE - 1)) & ~(CACHELINE_SIZE - 1))
+#define WITEM_CACHE_DISABLE 1
 
 struct work {
     STAILQ_ENTRY(work)   item_entry; 

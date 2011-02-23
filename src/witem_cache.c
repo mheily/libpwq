@@ -34,6 +34,39 @@
 
 pthread_key_t witem_cache_key;
 
+#if WITEM_CACHE_DISABLE    
+
+struct work *
+witem_alloc_from_heap(void)
+{
+	struct work *witem;
+    
+	while (!(witem = fastpath(malloc(ROUND_UP_TO_CACHELINE_SIZE(sizeof(*witem)))))) {
+		sleep(1);
+	}
+    
+	return witem;
+}
+
+struct work *
+witem_alloc_cacheonly()
+{
+	return NULL;
+}
+
+void 
+witem_free(struct work *wi)
+{
+    free(wi);
+}
+
+void
+witem_cache_cleanup(void *value)
+{
+}
+
+#else
+
 struct work *
 witem_alloc_from_heap(void)
 {
@@ -74,3 +107,5 @@ witem_cache_cleanup(void *value)
 		free(wi);
 	}
 }
+#endif
+
