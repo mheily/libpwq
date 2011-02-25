@@ -64,7 +64,11 @@ unsigned long gettime(void)
 static unsigned long gettime(void)
 {
     struct timespec ts;
+#ifdef __linux__
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+#else
     if (clock_gettime(CLOCK_HIGHRES, &ts) != 0)
+#endif
         fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
     return ((ts.tv_sec * NANOSECONDS_PER_SECOND) + ts.tv_nsec);
 }
