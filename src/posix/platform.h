@@ -1,6 +1,9 @@
 #ifndef _PTWQ_POSIX_PLATFORM_H
 #define _PTWQ_POSIX_PLATFORM_H 1
 
+/* Workaround to get visibility for _SC_NPROCESSORS_ONLN on FreeBSD */
+#define __BSD_VISIBLE 1
+
 #include <sys/resource.h>
 #include <sys/queue.h>
 #include <string.h>
