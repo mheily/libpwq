@@ -3,7 +3,7 @@
 #     http://tldp.org/LDP/LG/issue22/using_m4.html
 #
 
-OBJS=index.html
+OBJS=index.html download.html
 DESTDIR=~/public_html/proj/libpthread_workqueue
 
 all: clean $(OBJS)
@@ -24,4 +24,5 @@ install:
 	cp *.html *.css *.png ~/public_html/libkqueue/
 
 upload: $(OBJS)
+	ssh heily.com rm -f $(DESTDIR)/*.html
 	scp *.html *.css heily.com:$(DESTDIR)

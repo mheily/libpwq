@@ -18,8 +18,8 @@
 <hr/>
 <center>
 <a href="index.html">Overview</a> |
-<!--
 <a href="download.html">Download</a> |
+<!--
 <a href="install.html">Installation</a> |
 <a href="usage.html">Usage</a> |
 <a href="support.html">Support</a> |
