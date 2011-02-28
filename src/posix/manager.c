@@ -295,7 +295,7 @@ manager_main(void *unused)
 
         if (scoreboard.idle == 0) {
             scoreboard.load = get_load_average();
-            if (scoreboard.load < load_max) {
+            if ((scoreboard.load < load_max) && (scoreboard.count < worker_max)) {
                 dbg_puts("All workers are busy, spawning another worker");
                 if (worker_start() == 0)
                     scoreboard.count++;
@@ -422,7 +422,7 @@ get_process_limit(void)
     }
 #else
     /* Solaris doesn't define this limit anywhere I can see.. */
-    return (128);
+    return (64);
 #endif
 }
 
