@@ -40,13 +40,6 @@ post_configure_hook() {
 export_to_make() {
   for id in $*
   do
-
-    # Prepend $DESTDIR to installation directories
-    case "$id" in
-        prefix)  
-        eval "$id=\"\\\$\\\$DESTDIR\$$id\""
-    esac
-
     uc_id=`echo $id | $tr '[:lower:]' '[:upper:]'`;
     eval "echo \"$uc_id=\"\$$id\"\" >> config.mk"
   done
