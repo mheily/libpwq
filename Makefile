@@ -61,14 +61,13 @@ edit:
 
 $(PROGRAM)-$(VERSION).tar.gz: 
 	mkdir $(PROGRAM)-$(VERSION)
-	cp  Makefile ChangeLog configure config.inc      \
-        $(SOURCES) $(HEADERS)   \
-        $(MANS) $(EXTRA_DIST)   \
-        $(PROGRAM)-$(VERSION)
+	cp Makefile ChangeLog configure config.inc $(MANS) $(PROGRAM)-$(VERSION)
+	cp -R src testing include $(PROGRAM)-$(VERSION)
+	find $(PROGRAM)-$(VERSION) -name '.svn' -exec rm -rf {} \; 2>/dev/null || true
 	tar zcf $(PROGRAM)-$(VERSION).tar.gz $(PROGRAM)-$(VERSION)
 	rm -rf $(PROGRAM)-$(VERSION)
 
-dist: $(PROGRAM)-$(VERSION).tar.gz
+dist: clean $(PROGRAM)-$(VERSION).tar.gz
 
 dist-upload: dist
 	scp $(PROGRAM)-$(VERSION).tar.gz $(DIST)
@@ -78,6 +77,7 @@ publish-www:
 
 clean:
 	rm -f tags $(PROGRAM)-$(VERSION).tar.gz *.a $(OBJS) *.pc *.so *.so.* test-$(PROGRAM)
+	cd testing && make clean
 	rm -rf pkg
 
 distclean: clean

@@ -29,3 +29,6 @@ debug: test-$(PROGRAM)
 
 valgrind: test-$(PROGRAM)
 	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
+
+clean:
+	rm -f test-$(PROGRAM)

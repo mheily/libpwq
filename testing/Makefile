@@ -14,7 +14,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-check: 
-	cd api && make check
-	cd latency && make check
-#FIXME: cd libdispatch && make check
+# TODO: add libdispatch to TESTS
+
+TESTS=api latency
+
+all: check
+
+check clean: 
+	for x in $(TESTS) ; do cd $$x && make $@ && cd .. ; done
