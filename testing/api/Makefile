@@ -19,7 +19,7 @@
 include ../../config.mk
 
 test-$(PROGRAM): test.c
-	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -I../.. -L../.. test.c -lpthread -lpthread_workqueue
+	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -I../.. -I../../include -L../.. test.c -lpthread -lpthread_workqueue
 
 check: test-$(PROGRAM)
 	LD_LIBRARY_PATH=. ./test-$(PROGRAM)
