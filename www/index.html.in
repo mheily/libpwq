@@ -9,6 +9,7 @@ libpthread_workqueue is a portable implementation of the pthread_workqueue API f
 It has been ported to the following platforms:<br/>
 <ul>
 <li>Linux</li>
+<li>FreeBSD</li>
 <li>Solaris</li>
 <li>Microsoft Windows</li>
 </ul>
