@@ -35,14 +35,14 @@ $(PROGRAM).so: $(OBJS)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so.$(ABI_MAJOR)
 
 install: $(PROGRAM).so
-	$(INSTALL) -d -m 755 $(INCLUDEDIR)
-	$(INSTALL) -d -m 755 $(LIBDIR)
-	$(INSTALL) -m 644 $(HEADERS) $(INCLUDEDIR)
-	$(INSTALL) -m 644 $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)
-	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)/$(PROGRAM).so.$(ABI_MAJOR)
-	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(LIBDIR)/$(PROGRAM).so
-	$(INSTALL) -d -m 755 $(MANDIR)/man3
-	$(INSTALL) -m 644 pthread_workqueue.3 $(MANDIR)/man3/pthread_workqueue.3 
+	$(INSTALL) -d -m 755 $(DESTDIR)$(INCLUDEDIR)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -m 644 $(HEADERS) $(DESTDIR)$(INCLUDEDIR)
+	$(INSTALL) -m 644 $(PROGRAM).so.$(ABI_VERSION) $(DESTDIR)$(LIBDIR)
+	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(DESTDIR)$(LIBDIR)/$(PROGRAM).so.$(ABI_MAJOR)
+	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(DESTDIR)$(LIBDIR)/$(PROGRAM).so
+	$(INSTALL) -d -m 755 $(DESTDIR)$(MANDIR)/man3
+	$(INSTALL) -m 644 pthread_workqueue.3 $(DESTDIR)$(MANDIR)/man3/pthread_workqueue.3 
 
 uninstall:
 	rm -f $(INCLUDEDIR)/pthread_workqueue.h
