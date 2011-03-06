@@ -22,10 +22,10 @@ test-$(PROGRAM): test.c
 	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -I../.. -I../../include -L../.. test.c -lpthread -lpthread_workqueue
 
 check: test-$(PROGRAM)
-	LD_LIBRARY_PATH=. ./test-$(PROGRAM)
+	LD_LIBRARY_PATH=../..:/usr/sfw/lib/amd64 ./test-$(PROGRAM)
 
 debug: test-$(PROGRAM)
-	LD_LIBRARY_PATH=. gdb ./test-$(PROGRAM)
+	LD_LIBRARY_PATH=../.. gdb ./test-$(PROGRAM)
 
 valgrind: test-$(PROGRAM)
 	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
