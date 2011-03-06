@@ -1,5 +1,8 @@
-Version 0.2 HEAD
+Version 0.2 r72
+released 3/6/2011
 ---
+
+ * Add support for FreeBSD, Solaris, and Microsoft Windows
 
  * Fix a race condition that would cause deadlock in rare cases when either:
      1) pthread_cond_signal() was called while no other threads were 
@@ -17,4 +20,5 @@ Version 0.1 r?
 released 6/13/2010   
 ---
 
-  * Initial release
+  * Initial release for Debian as a patch applied to libdispatch. There 
+    was no tarball released for this version.
