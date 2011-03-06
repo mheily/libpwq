@@ -35,7 +35,7 @@ post_configure_hook() {
         cflags="$cflags -mthreads"
         ldflags="$ldflags -mthreads"
     	;;
-    solaris|linux)
+    solaris|linux|freebsd)
         cflags="$cflags -m64 -fpic"
     	ldflags="$ldflags -m64 -fpic"
 	;;
