@@ -34,9 +34,6 @@ $(PROGRAM).so: $(OBJS)
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so
 	$(LN) -sf $(PROGRAM).so.$(ABI_VERSION) $(PROGRAM).so.$(ABI_MAJOR)
 
-test-$(PROGRAM): *.c *.h
-	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -L. test.c -lpthread -lpthread_workqueue
-
 install: $(PROGRAM).so
 	$(INSTALL) -d -m 755 $(INCLUDEDIR)
 	$(INSTALL) -d -m 755 $(LIBDIR)
@@ -56,14 +53,8 @@ uninstall:
 
 reinstall: uninstall install
  
-check: test-$(PROGRAM)
-	LD_LIBRARY_PATH=. ./test-$(PROGRAM)
-
-debug: test-$(PROGRAM)
-	LD_LIBRARY_PATH=. gdb ./test-$(PROGRAM)
-
-valgrind: test-$(PROGRAM)
-	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
+check: $(PROGRAM).so
+	cd testing && make check
 
 edit:
 	$(EDITOR) `find ./ -name '*.c' -o -name '*.h'` Makefile

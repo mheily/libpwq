@@ -14,7 +14,18 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-check: 
-	cd api && make check
-	cd latency && make check
-#FIXME: cd libdispatch && make check
+.PHONY :: install uninstall check dist dist-upload publish-www clean merge distclean fresh-build rpm edit cscope valgrind
+
+include ../../config.mk
+
+test-$(PROGRAM): test.c
+	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -I../.. -L../.. test.c -lpthread -lpthread_workqueue
+
+check: test-$(PROGRAM)
+	LD_LIBRARY_PATH=. ./test-$(PROGRAM)
+
+debug: test-$(PROGRAM)
+	LD_LIBRARY_PATH=. gdb ./test-$(PROGRAM)
+
+valgrind: test-$(PROGRAM)
+	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
