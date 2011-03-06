@@ -70,7 +70,7 @@ $(PROGRAM)-$(VERSION).tar.gz:
 dist: clean $(PROGRAM)-$(VERSION).tar.gz
 
 dist-upload: dist
-	scp $(PROGRAM)-$(VERSION).tar.gz $(DIST)
+	scp $(PROGRAM)-$(VERSION).tar.gz heily.com:~/public_html/proj/$(PROGRAM)/dist
 
 publish-www:
 	cp -R www/* ~/public_html/libkqueue/
