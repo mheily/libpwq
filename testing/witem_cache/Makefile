@@ -14,11 +14,22 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-# TODO: add libdispatch to TESTS
+.PHONY :: install uninstall check dist dist-upload publish-www clean merge distclean fresh-build rpm edit cscope valgrind
 
-TESTS=api latency witem_cache
+include ../../config.mk
 
-all: check
+test-$(PROGRAM): test.c
+	$(CC) $(CFLAGS) -g -O0 -o test-$(PROGRAM) -I../.. -I../../include -L../.. test.c -lpthread -lpthread_workqueue
 
-check clean: 
-	for x in $(TESTS) ; do cd $$x && make $@ && cd .. ; done
+check: test-$(PROGRAM)
+	LD_LIBRARY_PATH=../..:/usr/sfw/lib/amd64 ./test-$(PROGRAM)
+
+debug: test-$(PROGRAM)
+	LD_LIBRARY_PATH=../.. gdb ./test-$(PROGRAM)
+
+valgrind: test-$(PROGRAM)
+	LD_LIBRARY_PATH=../..:/usr/sfw/lib/amd64 \
+	valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes ./test-$(PROGRAM)
+
+clean:
+	rm -f test-$(PROGRAM)
