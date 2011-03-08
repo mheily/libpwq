@@ -27,7 +27,7 @@
  */
 
 
-#ifdef __sun
+#if defined(__sun)
 
 #include <stdio.h>
 #include <procfs.h>
@@ -39,7 +39,10 @@
 #include "platform.h"
 #include "private.h"
 
-/*
+/* 
+ 
+ /proc for Solaris
+ 
  STRUCTURE OF /proc/pid
  A given directory /proc/pid contains the following  entries.
  A  process  can  use  the  invisible  alias /proc/self if it
@@ -148,7 +151,46 @@ errout:
     return retval;
 }
 
-#else // not yet implemented for other platforms
+#elif defined(__linux__)
+
+/* 
+ 
+ /proc for Linux
+ 
+ /proc/self
+ This directory refers to the process accessing the /proc filesystem, and is identical to the /proc directory named by the process ID of the same process.
+ 
+ ÑÑÑÑÑÑÑ
+ 
+ /proc/[number]/stat
+ Status information about the process. This is used by ps(1). It is defined in /usr/src/linux/fs/proc/array.c.
+ The fields, in order, with their proper scanf(3) format specifiers, are:
+ 
+ pid %d
+ The process ID.
+ 
+ comm %s
+ The filename of the executable, in parentheses. This is visible whether or not the executable is swapped out.
+ 
+ state %c
+ One character from the string "RSDZTW" where R is running, S is sleeping in an interruptible wait, D is waiting in uninterruptible disk sleep, Z is zombie, T is traced or stopped (on a signal), and W is paging.
+ 
+ ---------------
+ 
+ /proc/[number]/task (since kernel 2.6.0-test6)
+ This is a directory that contains one subdirectory for each thread in the process. The name of each subdirectory is the numerical thread ID of the thread (see gettid(2)). Within each of these subdirectories, there is a set of files with the same names and contents as under the /proc/[number] directories. For attributes that are shared by all threads, the contents for each of the files under the task/[thread-ID] subdirectories will be the same as in the corresponding file in the parent /proc/[number] directory (e.g., in a multithreaded process, all of the task/[thread-ID]/cwd files will have the same value as the /proc/[number]/cwd file in the parent directory, since all of the threads in a process share a working directory). For attributes that are distinct for each thread, the corresponding files under task/[thread-ID] may have different values (e.g., various fields in each of the task/[thread-ID]/status files may be different for each thread).
+ In a multithreaded process, the contents of the /proc/[number]/task directory are not available if the main thread has already terminated (typically by calling pthread_exit(3)).
+ 
+ ---------------
+ 
+*/
+
+int threads_runnable(unsigned int *threads_running)
+{
+    return -1;
+}
+
+#else
 
 int threads_runnable(unsigned int *threads_running)
 {
