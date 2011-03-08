@@ -154,11 +154,9 @@ worker_main(void *arg)
     void (*func)(void *);
     void *func_arg;
 
-    for (;;) {
-        /* Force the manager thread to wakeup if too many workers are idle */
-        if (slowpath(scoreboard.idle > worker_idle_threshold && !scoreboard.sb_wake_pending))
-            _wakeup_manager();
+    dbg_puts("worker started");
 
+    for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
 
         atomic_inc(&scoreboard.idle);
@@ -261,7 +259,9 @@ manager_main(void *unused)
     unsigned int worker_max, current_thread_count = 0;
     int i;
     sigset_t sigmask, oldmask;
-    
+    struct timespec   ts;
+    struct timeval    tp;
+
     worker_max = get_process_limit();
     scoreboard.load = get_load_average();
 
@@ -281,10 +281,6 @@ manager_main(void *unused)
     pthread_cond_signal(&manager_init_cond);
 
     for (;;) {
-
-        dbg_printf("load=%u idle=%u workers=%u max_workers=%u worker_min = %u",
-                   scoreboard.load, scoreboard.idle, scoreboard.count, worker_max, worker_min
-                );
 
 #if DEADWOOD
         /* Examine each worker and update statistics */
@@ -310,13 +306,29 @@ manager_main(void *unused)
         }
 #endif
 
-        dbg_puts("manager is sleeping");
         pthread_mutex_lock(&scoreboard.sb_wake_mtx);
-        pthread_cond_wait(&scoreboard.sb_wake_cond, &scoreboard.sb_wake_mtx);
+
+        dbg_puts("manager is sleeping");
         
+        (void) gettimeofday(&tp, NULL); // TODO - error checking
+        
+        /* Convert from timeval to timespec */
+        ts.tv_sec  = tp.tv_sec;
+        ts.tv_nsec = tp.tv_usec * 1000;
+        ts.tv_sec += 1; // wake once per second and check if we have too many idle threads...
+
+        // We should only sleep on the condition if there are no pending signal, spurious wakeup is also ok
+        if (scoreboard.sb_wake_pending == 0)
+            pthread_cond_timedwait(&scoreboard.sb_wake_cond, &scoreboard.sb_wake_mtx, &ts);
+
+        scoreboard.sb_wake_pending = 0; // we must set this before spawning any new threads below, or we race...
+
         dbg_puts("manager is awake");
 
-        // No workers available?
+        dbg_printf("load=%u idle=%u workers=%u max_workers=%u worker_min = %u",
+                   scoreboard.load, scoreboard.idle, scoreboard.count, worker_max, worker_min);
+                
+        // If no workers available, check if we should create a new one
         if (scoreboard.idle == 0) {
             scoreboard.load = get_load_average();
             if ((scoreboard.load < load_max) && (scoreboard.count < worker_max)) {
@@ -345,7 +357,7 @@ manager_main(void *unused)
             }
         }
         
-        // Too many idle workers?
+        // Too many idle workers, time to stop one?
         if (scoreboard.idle > worker_idle_threshold)
         {
             dbg_puts("Removing one thread from the thread pool");
@@ -353,7 +365,6 @@ manager_main(void *unused)
                 scoreboard.count--;
         }
         
-        scoreboard.sb_wake_pending = 0;
         pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
 
 #if DEADWOOD
