@@ -30,6 +30,7 @@
 #include "platform.h"
 #include "private.h"
 #include "pthread_workqueue.h"
+#include "thread_info.h"
 
 /* Function prototypes */
 static unsigned int get_load_average(void);
@@ -41,6 +42,7 @@ static unsigned int      cpu_count;
 
 static LIST_HEAD(, worker) workers;
 static unsigned int      worker_min;
+static unsigned int      worker_idle_threshold; // we don't go down below this if we had to increase # workers
 
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static pthread_mutex_t   wqlist_mtx;
@@ -82,12 +84,21 @@ manager_init(void)
     pthread_mutex_init(&scoreboard.sb_wake_mtx, NULL);
 
     /* Determine the initial thread pool constraints */
-    worker_min = cpu_count;
+    if (cpu_count >= 12) 
+        worker_min = cpu_count / 4;
+    else
+        worker_min = cpu_count / 2;
 
+    if (worker_min < 2)
+        worker_min = 2;
+    
+    worker_idle_threshold = worker_min * 2;
+    
     manager_start();
 
     pthread_cond_wait(&manager_init_cond, &manager_mtx);
     pthread_mutex_unlock(&manager_mtx);
+    
     return (0);
 }
 
@@ -124,6 +135,17 @@ out:
     return (witem);
 }
 
+static void _wakeup_manager()
+{
+    dbg_puts("asking manager to wake up");
+
+    pthread_mutex_lock(&scoreboard.sb_wake_mtx);
+    scoreboard.sb_wake_pending = 1;
+    pthread_cond_signal(&scoreboard.sb_wake_cond);
+    pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
+    return;
+}
+
 static void *
 worker_main(void *arg)
 {
@@ -133,6 +155,10 @@ worker_main(void *arg)
     void *func_arg;
 
     for (;;) {
+        /* Force the manager thread to wakeup if too many workers are idle */
+        if (slowpath(scoreboard.idle > worker_idle_threshold && !scoreboard.sb_wake_pending))
+            _wakeup_manager();
+
         pthread_mutex_lock(&wqlist_mtx);
 
         atomic_inc(&scoreboard.idle);
@@ -141,7 +167,7 @@ worker_main(void *arg)
         while ((witem = wqlist_scan()) == NULL)
             pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
 
-        if (witem->func == NULL) {
+        if (slowpath(witem->func == NULL)) {
             dbg_puts("worker exiting..");
             self->state = WORKER_STATE_ZOMBIE;
             atomic_dec(&scoreboard.idle);
@@ -152,24 +178,21 @@ worker_main(void *arg)
         atomic_dec(&scoreboard.idle);
         self->state = WORKER_STATE_RUNNING;
 
-        /* Force the manager thread to wakeup if all workers are busy */
         dbg_printf("count=%u idle=%u wake_pending=%u", 
             scoreboard.count, scoreboard.idle,  scoreboard.sb_wake_pending);
-        if (scoreboard.idle == 0 && !scoreboard.sb_wake_pending) {
-            dbg_puts("asking manager to wake up");
-            pthread_mutex_lock(&scoreboard.sb_wake_mtx);
-            scoreboard.sb_wake_pending = 1;
-            pthread_cond_signal(&scoreboard.sb_wake_cond);
-            pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
-        }
+        
+        /* Force the manager thread to wakeup if all workers are busy */
+        if (slowpath(scoreboard.idle == 0 && !scoreboard.sb_wake_pending))
+            _wakeup_manager();
 
         /* Invoke the callback function, free witem first for possible reuse */
         func = witem->func;
         func_arg = witem->func_arg;
         witem_free(witem);
         
-        func(func_arg);
+        func(func_arg);    
     }
+
     /* NOTREACHED */
     return (NULL);
 }
@@ -235,7 +258,7 @@ manager_main(void *unused)
 {
     //struct worker *wkr;
     unsigned int load_max = cpu_count * 2;
-    unsigned int worker_max;
+    unsigned int worker_max, current_thread_count = 0;
     int i;
     sigset_t sigmask, oldmask;
     
@@ -259,8 +282,8 @@ manager_main(void *unused)
 
     for (;;) {
 
-        dbg_printf("load=%u idle=%u workers=%u max_workers=%u",
-                   scoreboard.load, scoreboard.idle, scoreboard.count, worker_max
+        dbg_printf("load=%u idle=%u workers=%u max_workers=%u worker_min = %u",
+                   scoreboard.load, scoreboard.idle, scoreboard.count, worker_max, worker_min
                 );
 
 #if DEADWOOD
@@ -293,14 +316,43 @@ manager_main(void *unused)
         
         dbg_puts("manager is awake");
 
+        // No workers available?
         if (scoreboard.idle == 0) {
             scoreboard.load = get_load_average();
             if ((scoreboard.load < load_max) && (scoreboard.count < worker_max)) {
-                dbg_puts("All workers are busy, spawning another worker");
-                if (worker_start() == 0)
-                    scoreboard.count++;
+                if (threads_runnable(&current_thread_count) == 0)
+                {
+                    // only start thread if we have less runnable threads than cpus
+                    if (current_thread_count >= cpu_count)
+                    {
+                        dbg_printf("Not spawning worker thread, thread_runnable = %d >= cpu_count = %d", 
+                                   current_thread_count, cpu_count);
+                    }
+                    else
+                    {
+                        dbg_puts("All workers are busy, spawning another worker");
+                        if (worker_start() == 0)
+                            scoreboard.count++;                                        
+                    }
+                }
+                else // always start thread if we can't get runnable count
+                {
+                    dbg_puts("Failed to determine current number of runnable threads");
+                    dbg_puts("All workers are busy, spawning another worker");
+                    if (worker_start() == 0)
+                        scoreboard.count++;                    
+                }
             }
         }
+        
+        // Too many idle workers?
+        if (scoreboard.idle > worker_idle_threshold)
+        {
+            dbg_puts("Removing one thread from the thread pool");
+            if (worker_stop() == 0)
+                scoreboard.count--;
+        }
+        
         scoreboard.sb_wake_pending = 0;
         pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
 
