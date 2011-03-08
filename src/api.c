@@ -30,7 +30,7 @@
 #include "private.h"
 
 int DEBUG = 0;
-char *DEBUG_IDENT = "KQ";
+char *DEBUG_IDENT = "WQ";
 
 static int
 valid_workq(pthread_workqueue_t workq) 
