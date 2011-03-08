@@ -44,17 +44,7 @@
 #endif
 
 #include "pthread_workqueue.h"
-
-// #define PTHREAD_WORKQUEUE_DEBUG 1
-#ifdef PTHREAD_WORKQUEUE_DEBUG
-# define dbg_puts(str)           fprintf(stderr, "%s(): %s\n", __func__,str)
-# define dbg_printf(fmt,...)     fprintf(stderr, "%s(): "fmt"\n", __func__,__VA_ARGS__)
-# define dbg_perror(str)         fprintf(stderr, "%s(): %s: %s\n", __func__,str, strerror(errno))
-#else
-# define dbg_puts(str)           ;
-# define dbg_printf(fmt,...)     ;
-# define dbg_perror(str)         ;
-#endif 
+#include "debug.h"
 
 /* The total number of priority levels. */
 #define WORKQ_NUM_PRIOQUEUE 3

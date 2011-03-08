@@ -29,6 +29,9 @@
 
 #include "private.h"
 
+int DEBUG = 0;
+char *DEBUG_IDENT = "KQ";
+
 static int
 valid_workq(pthread_workqueue_t workq) 
 {
@@ -42,6 +45,15 @@ valid_workq(pthread_workqueue_t workq)
 int CONSTRUCTOR
 pthread_workqueue_init_np(void)
 {
+#ifdef NDEBUG
+    DEBUG = 0;
+#elif _WIN32
+	/* Experimental port, always debug */
+	DEBUG = 1;
+#else
+    DEBUG = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
+#endif
+
     if (manager_init() < 0)
         return (-1);
  
