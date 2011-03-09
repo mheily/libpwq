@@ -32,6 +32,10 @@
 #include "pthread_workqueue.h"
 #include "thread_info.h"
 
+/* Tunable constants */
+
+#define WORKER_IDLE_SECONDS_THRESHOLD 5
+
 /* Function prototypes */
 static unsigned int get_load_average(void);
 static void * worker_main(void *arg);
@@ -62,6 +66,34 @@ static struct {
     pthread_cond_t  sb_wake_cond;
 } scoreboard;
 
+static unsigned int 
+worker_idle_threshold_per_cpu()
+{
+    switch (cpu_count)
+    {
+        case 0:
+        case 1:
+        case 2:
+        case 4:
+          return 2;
+        case 6:
+          return 3;
+        case 8:
+        case 12:
+          return 4;
+        case 16:
+        case 24:
+          return 6;
+        case 32:
+        case 64:
+          return 8;
+        default:
+            return cpu_count / 4;
+    }
+    
+    return 2;
+}
+
 int
 manager_init(void)
 {
@@ -84,16 +116,9 @@ manager_init(void)
     pthread_mutex_init(&scoreboard.sb_wake_mtx, NULL);
 
     /* Determine the initial thread pool constraints */
-    if (cpu_count >= 12) 
-        worker_min = cpu_count / 4;
-    else
-        worker_min = cpu_count / 2;
+    worker_min = 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
+    worker_idle_threshold = worker_idle_threshold_per_cpu();
 
-    if (worker_min < 2)
-        worker_min = 2;
-    
-    worker_idle_threshold = worker_min * 2;
-    
     manager_start();
 
     pthread_cond_wait(&manager_init_cond, &manager_mtx);
@@ -257,7 +282,9 @@ manager_main(void *unused)
     //struct worker *wkr;
     unsigned int load_max = cpu_count * 2;
     unsigned int worker_max, current_thread_count = 0;
-    int i;
+    unsigned int worker_idle_seconds_accumulated = 0;
+    unsigned int max_threads_to_stop = 0;
+    int i, cond_wait_rv = 0;
     sigset_t sigmask, oldmask;
     struct timespec   ts;
     struct timeval    tp;
@@ -319,7 +346,7 @@ manager_main(void *unused)
 
         // We should only sleep on the condition if there are no pending signal, spurious wakeup is also ok
         if (scoreboard.sb_wake_pending == 0)
-            pthread_cond_timedwait(&scoreboard.sb_wake_cond, &scoreboard.sb_wake_mtx, &ts);
+            cond_wait_rv = pthread_cond_timedwait(&scoreboard.sb_wake_cond, &scoreboard.sb_wake_mtx, &ts);
 
         scoreboard.sb_wake_pending = 0; // we must set this before spawning any new threads below, or we race...
 
@@ -356,13 +383,41 @@ manager_main(void *unused)
                 }
             }
         }
-        
-        // Too many idle workers, time to stop one?
-        if (scoreboard.idle > worker_idle_threshold)
+        else
         {
-            dbg_puts("Removing one thread from the thread pool");
-            if (worker_stop() == 0)
-                scoreboard.count--;
+            if (cond_wait_rv == ETIMEDOUT) // Only check for ramp down on the 'timer tick'
+            {
+                if ((scoreboard.idle - worker_idle_threshold) > 0) // only accumulate if there are 'too many' idle threads
+                {
+                    worker_idle_seconds_accumulated += scoreboard.idle; // keep track of many idle 'thread seconds' we have
+                
+                    dbg_printf("worker_idle_seconds_accumulated = %d, scoreboard.idle = %d, scoreboard.count = %d\n",
+                       worker_idle_seconds_accumulated, scoreboard.idle, scoreboard.count);
+                }
+                
+                // Only consider ramp down if we have accumulated enough thread 'idle seconds'
+                // this logic will ensure that a large number of idle threads will ramp down faster
+                max_threads_to_stop = worker_idle_seconds_accumulated / WORKER_IDLE_SECONDS_THRESHOLD;
+
+                if (max_threads_to_stop > 0)
+                {
+                    worker_idle_seconds_accumulated = 0; 
+
+                    if (max_threads_to_stop > (scoreboard.idle - worker_idle_threshold))
+                        max_threads_to_stop = (scoreboard.idle - worker_idle_threshold);
+
+                    // Only stop threads if we actually have 'too many' idle ones in the pool
+                    if (scoreboard.idle > worker_idle_threshold)
+                    {
+                        for (i = 0; i < max_threads_to_stop; i++)
+                        {
+                            dbg_puts("Removing one thread from the thread pool");
+                            if (worker_stop() == 0)
+                                scoreboard.count--;                        
+                        }                    
+                    }
+                }
+            }            
         }
         
         pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
