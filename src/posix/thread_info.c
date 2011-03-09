@@ -26,6 +26,8 @@
  *
  */
 
+#include "platform.h"
+#include "private.h"
 
 #if defined(__sun)
 
@@ -35,9 +37,6 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <fcntl.h>
-
-#include "platform.h"
-#include "private.h"
 
 /* 
  
@@ -182,11 +181,121 @@ errout:
  In a multithreaded process, the contents of the /proc/[number]/task directory are not available if the main thread has already terminated (typically by calling pthread_exit(3)).
  
  ---------------
- 
+
+ Example:
+ read data from /proc/self/task/11019/stat: [11019 (lt-dispatch_sta) D 20832 10978 20832 34819 10978 4202560 251 3489 0 0 0 2 2 5 20 0 37 0 138715543 2538807296 13818 18446744073709551615 4194304 4203988 140736876632592 139770298610200 139771956665732 0 0 0 0 0 0 0 -1 2 0 0 0 0 0
+
 */
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+
+#define MAX_RESULT_SIZE 4096
+
+int _read_file(const char *path, char *result)
+{
+	int read_fd, retval = -1;
+    ssize_t actual_read;
+    
+    read_fd = open(path, O_RDONLY);
+	if (read_fd == -1) 
+    {
+        dbg_perror("open()");
+        return retval;
+	}
+    
+	if (fcntl(read_fd, F_SETFL, O_NONBLOCK) != 0) 
+    {
+        dbg_perror("fcntl()");
+        goto errout;
+	}
+        
+    actual_read = read(read_fd, result, MAX_RESULT_SIZE);
+
+    dbg_printf("read %ld from %s", actual_read, path);
+
+    if (actual_read == 0)
+    {
+        goto errout;
+    }
+    
+    retval = 0;
+    
+errout:
+    if (close(read_fd) != 0)
+    {
+        dbg_perror("close()");
+    }
+    
+    return retval;
+}
+
 
 int threads_runnable(unsigned int *threads_running)
 {
+    DIR             *dip;
+    struct dirent   *dit;
+    const char *task_path = "/proc/self/task";
+    char thread_path[1024];
+    char thread_data[MAX_RESULT_SIZE+1];
+    char dummy[MAX_RESULT_SIZE+1];
+    char state;
+    int pid;
+    unsigned int running_count = 0;
+
+    dbg_puts("Checking threads_runnable()");
+
+    if ((dip = opendir(task_path)) == NULL)
+    {
+        dbg_perror("opendir");
+        return -1;
+    }
+        
+    while ((dit = readdir(dip)) != NULL)
+    {
+        memset(thread_data, 0, sizeof(thread_data));
+        
+        sprintf(thread_path, "%s/%s/stat",task_path, dit->d_name);
+
+        if (_read_file(thread_path, thread_data) == 0)
+        {
+            if (sscanf(thread_data, "%d %s %c", &pid, dummy, &state) == 3)
+            {
+                dbg_printf("The state for thread %s is %c", dit->d_name, state);
+                switch (state)
+                {
+                    case 'R':
+                        running_count++;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else
+            {
+                dbg_printf("Failed to scan state for thread %s (%s)", dit->d_name, thread_data);
+            }
+        }
+    }
+
+    if (closedir(dip) == -1)
+    {
+        perror("closedir");
+        return 0;
+    }
+
+    if (running_count > 0)
+    {
+        dbg_printf("Running count is %d", running_count);
+        *threads_running = running_count;
+        return 0;
+    }
+
+    dbg_printf("Failed, running count is %d", running_count);
+
     return -1;
 }
 
