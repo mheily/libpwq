@@ -23,6 +23,11 @@ extern int DEBUG;
 extern char *DEBUG_IDENT;
 
 #if defined(__linux__)
+
+#include <linux/unistd.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
 # define THREAD_ID ((pid_t)  syscall(__NR_gettid))
 #elif defined(__sun)
 # define THREAD_ID (pthread_self())

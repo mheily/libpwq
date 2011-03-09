@@ -31,6 +31,7 @@
 #include "private.h"
 #include "pthread_workqueue.h"
 #include "thread_info.h"
+#include <sys/time.h>
 
 /* Tunable constants */
 
