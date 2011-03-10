@@ -357,9 +357,19 @@ manager_main(void *unused)
                    scoreboard.load, scoreboard.idle, scoreboard.count, worker_max, worker_min);
                 
         // If no workers available, check if we should create a new one
-        if (scoreboard.idle == 0) {
+        if (scoreboard.idle == 0) 
+        {
             scoreboard.load = get_load_average();
-            if ((scoreboard.load < load_max) && (scoreboard.count < worker_max)) {
+            
+            if ((scoreboard.load < load_max) && (scoreboard.count < worker_max)) 
+            {
+                if (scoreboard.count < worker_idle_threshold) // allow cheap rampup up to worker_idle_threshold without going to /proc
+                {
+                    dbg_puts("All workers are busy, spawning another worker");
+                    if (worker_start() == 0)
+                        scoreboard.count++;                                                            
+                }
+                else // check through /proc, will be a bit more expensive in terms of latency
                 if (threads_runnable(&current_thread_count) == 0)
                 {
                     // only start thread if we have less runnable threads than cpus
@@ -422,65 +432,6 @@ manager_main(void *unused)
         }
         
         pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
-
-#if DEADWOOD
-        /* Check if there is too much work and not enough workers */
-        if ((wqlist_work_counter > st.count) && (st.count < worker_max)) {
-            if (st.load < cpu_count) {
-                dbg_puts("Too much work, spawning another worker");
-                worker_start();
-            } else {
-                dbg_puts("System load is too high to spawn another worker.");
-            }
-        }
-
-        /* Check if there are too many active workers and not enough CPUs */
-        if (choke_timeout == 0) {
-            if ((st.load > cpu_count) && (st.count > worker_max)) {
-                    dbg_puts("Workload is too high, removing one thread from the thread pool");
-                    worker_stop();
-            } else if ((len < 3) && (wqlist_work_counter > 0)) {
-                dbg_puts("Some workers may be stalled, will add another thread");
-                worker_start();
-            }
-            choke_timeout = max_choke;
-        } else {
-            choke_timeout--;
-        }
-
-        /* Check if there are too many workers and not enough work*/
-        if (wqlist_work_counter == 0) {
-            if (st.count > worker_min) {
-                dbg_puts("Removing one thread from the thread pool");
-                worker_stop();
-                idle_timeout++;
-            }
-
-            if (idle_timeout > 0) {
-                idle_timeout--;
-            } else if (st.count > 0) {
-                dbg_puts("Removing one thread from the thread pool");
-                worker_stop();
-                idle_timeout++;
-            } else if (st.count == 0) {
-
-                /* Confirm that all workers have exited */
-                if (! LIST_EMPTY(&workers))
-                    idle_timeout++;
-
-                if (idle_timeout == 0) {
-                    dbg_puts("killing the manager thread");
-                    pthread_mutex_lock(&wqlist_mtx);
-                    wqlist_has_manager = 0;
-                    pthread_mutex_unlock(&wqlist_mtx);
-                    pthread_exit(0);
-                } else {
-                    dbg_puts("waiting for all workers to exit");
-                }
-            }
-        }
-#endif
-
     }
 
     /*NOTREACHED*/
