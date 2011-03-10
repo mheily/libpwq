@@ -180,29 +180,27 @@ worker_main(void *arg)
     void (*func)(void *);
     void *func_arg;
 
-    dbg_puts("worker started");
-    scoreboard.count++;
+    dbg_puts("worker thread started");
     
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
 
-        atomic_inc(&scoreboard.idle);
         self->state = WORKER_STATE_SLEEPING;
-        
+
         while ((witem = wqlist_scan()) == NULL)
             pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
+
+        self->state = WORKER_STATE_RUNNING;
+
+        atomic_dec(&scoreboard.idle);
 
         if (slowpath(witem->func == NULL)) {
             dbg_puts("worker exiting..");
             self->state = WORKER_STATE_ZOMBIE;
-            atomic_dec(&scoreboard.idle);
             witem_free(witem);
             scoreboard.count--;
             pthread_exit(0);
         }
-
-        atomic_dec(&scoreboard.idle);
-        self->state = WORKER_STATE_RUNNING;
 
         dbg_printf("count=%u idle=%u wake_pending=%u", 
             scoreboard.count, scoreboard.idle,  scoreboard.sb_wake_pending);
@@ -217,6 +215,8 @@ worker_main(void *arg)
         witem_free(witem);
         
         func(func_arg);    
+        
+        atomic_inc(&scoreboard.idle); // initial inc was one in worker_start, this is to avoid a race
     }
 
     /* NOTREACHED */
@@ -236,8 +236,13 @@ worker_start(void)
         return (-1);
     }
 
+    scoreboard.count++;
+    atomic_inc(&scoreboard.idle);
+
     if (pthread_create(&wkr->tid, &detached_attr, worker_main, wkr) != 0) {
         dbg_perror("pthread_create(3)");
+        atomic_dec(&scoreboard.idle);
+        scoreboard.count--;
         return (-1);
     }
 
