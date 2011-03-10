@@ -284,19 +284,12 @@ int threads_runnable(unsigned int *threads_running)
     if (closedir(dip) == -1)
     {
         perror("closedir");
-        return 0;
     }
 
-    if (running_count > 0)
-    {
-        dbg_printf("Running count is %d", running_count);
-        *threads_running = running_count;
-        return 0;
-    }
-
-    dbg_printf("Failed, running count is %d", running_count);
-
-    return -1;
+    dbg_printf("Running count is %d", running_count);
+    *threads_running = running_count;
+    
+    return 0;
 }
 
 #else
