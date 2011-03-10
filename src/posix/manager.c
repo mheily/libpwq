@@ -181,7 +181,8 @@ worker_main(void *arg)
     void *func_arg;
 
     dbg_puts("worker started");
-
+    scoreboard.count++;
+    
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
 
@@ -196,6 +197,7 @@ worker_main(void *arg)
             self->state = WORKER_STATE_ZOMBIE;
             atomic_dec(&scoreboard.idle);
             witem_free(witem);
+            scoreboard.count--;
             pthread_exit(0);
         }
 
@@ -226,6 +228,8 @@ worker_start(void)
 {
     struct worker *wkr;
 
+    dbg_puts("Spawning another worker");
+
     wkr = calloc(1, sizeof(*wkr));
     if (wkr == NULL) {
         dbg_perror("calloc(3)");
@@ -238,8 +242,6 @@ worker_start(void)
     }
 
     LIST_INSERT_HEAD(&workers, wkr, entries);
-
-    dbg_puts("created a new thread");
 
     return (0);
 }
@@ -299,10 +301,8 @@ manager_main(void *unused)
 
     /* Create the minimum number of workers */
     scoreboard.count = 0;
-    for (i = 0; i < worker_min; i++) {
+    for (i = 0; i < worker_min; i++)
         worker_start();
-        scoreboard.count++;
-    }
 
     pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
 
@@ -357,7 +357,7 @@ manager_main(void *unused)
                    scoreboard.load, scoreboard.idle, scoreboard.count, worker_max, worker_min);
                 
         // If no workers available, check if we should create a new one
-        if (scoreboard.idle == 0) 
+        if (scoreboard.idle == 0 && (scoreboard.count > 0)) // last part required for an extremely unlikely race at startup
         {
             scoreboard.load = get_load_average();
             
@@ -365,9 +365,7 @@ manager_main(void *unused)
             {
                 if (scoreboard.count < worker_idle_threshold) // allow cheap rampup up to worker_idle_threshold without going to /proc
                 {
-                    dbg_puts("All workers are busy, spawning another worker");
-                    if (worker_start() == 0)
-                        scoreboard.count++;                                                            
+                    worker_start();
                 }
                 else // check through /proc, will be a bit more expensive in terms of latency
                 if (threads_runnable(&current_thread_count) == 0)
@@ -380,17 +378,12 @@ manager_main(void *unused)
                     }
                     else
                     {
-                        dbg_puts("All workers are busy, spawning another worker");
-                        if (worker_start() == 0)
-                            scoreboard.count++;                                        
+                        worker_start();
                     }
                 }
                 else // always start thread if we can't get runnable count
                 {
-                    dbg_puts("Failed to determine current number of runnable threads");
-                    dbg_puts("All workers are busy, spawning another worker");
-                    if (worker_start() == 0)
-                        scoreboard.count++;                    
+                    worker_start();
                 }
             }
         }
@@ -423,8 +416,7 @@ manager_main(void *unused)
                         for (i = 0; i < max_threads_to_stop; i++)
                         {
                             dbg_puts("Removing one thread from the thread pool");
-                            if (worker_stop() == 0)
-                                scoreboard.count--;                        
+                            worker_stop();
                         }                    
                     }
                 }
