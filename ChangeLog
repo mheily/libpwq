@@ -1,3 +1,9 @@
+Version 0.4.1 r98
+released 3/13/2011
+---
+
+ * Add -lpthread to LDFLAGS
+
 Version 0.4 r97
 released 3/12/2011
 ---

@@ -4,7 +4,7 @@ abi_major="0"
 abi_minor="0"
 abi_version="$abi_major.$abi_minor"
 cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -std=c99 -fvisibility=hidden -I./include -I./src"
-ldflags=""
+ldflags="-lpthread"
 sources='src/api.c src/$(API)/manager.c src/$(API)/thread_info.c src/witem_cache.c'
 libdepends=""
 deps="src/*.h"
