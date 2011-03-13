@@ -9,6 +9,8 @@
 /* Instead of __attribute__ ((constructor)), use DllMain() */
 #define CONSTRUCTOR	  /* */
 
+#define VISIBLE __declspec(dllexport)
+
 # define __func__ __FUNCTION__
 
 #undef LIST_HEAD

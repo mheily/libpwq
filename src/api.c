@@ -41,8 +41,7 @@ valid_workq(pthread_workqueue_t workq)
         return (0);
 }
 
-// static - can't be static as this is checked for by libdispatch's configure
-int CONSTRUCTOR
+int VISIBLE CONSTRUCTOR
 pthread_workqueue_init_np(void)
 {
 #ifdef NDEBUG
@@ -61,7 +60,7 @@ pthread_workqueue_init_np(void)
     return (0);
 }
 
-int
+int VISIBLE
 pthread_workqueue_create_np(pthread_workqueue_t *workqp,
                             const pthread_workqueue_attr_t * attr)
 {
@@ -92,7 +91,7 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
     return (0);
 }
 
-int
+int VISIBLE
 pthread_workqueue_additem_np(pthread_workqueue_t workq,
                      void (*workitem_func)(void *), void * workitem_arg,
                      pthread_workitem_handle_t * itemhandlep, 
@@ -125,7 +124,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
     return (0);
 }
 
-int
+int VISIBLE
 pthread_workqueue_attr_init_np(pthread_workqueue_attr_t *attr)
 {
     attr->queueprio = WORKQ_DEFAULT_PRIOQUEUE;
@@ -134,7 +133,7 @@ pthread_workqueue_attr_init_np(pthread_workqueue_attr_t *attr)
     return (0);
 }
 
-int
+int VISIBLE
 pthread_workqueue_attr_destroy_np(pthread_workqueue_attr_t *attr)
 {
     if (attr->sig == PTHREAD_WORKQUEUE_ATTR_SIG)
@@ -143,7 +142,7 @@ pthread_workqueue_attr_destroy_np(pthread_workqueue_attr_t *attr)
         return (EINVAL); /* Not an attribute struct. */
 }
 
-int
+int VISIBLE
 pthread_workqueue_attr_getovercommit_np(
         const pthread_workqueue_attr_t *attr, int *ocommp)
 {
@@ -154,7 +153,7 @@ pthread_workqueue_attr_getovercommit_np(
         return (EINVAL); /* Not an attribute struct. */
 }
 
-int
+int VISIBLE
 pthread_workqueue_attr_setovercommit_np(pthread_workqueue_attr_t *attr,
                            int ocomm)
 {
@@ -165,7 +164,7 @@ pthread_workqueue_attr_setovercommit_np(pthread_workqueue_attr_t *attr,
         return (EINVAL);
 }
 
-int
+int VISIBLE
 pthread_workqueue_attr_getqueuepriority_np(
         pthread_workqueue_attr_t *attr, int *qpriop)
 {
@@ -176,7 +175,7 @@ pthread_workqueue_attr_getqueuepriority_np(
         return (EINVAL);
 }
 
-int 
+int VISIBLE
 pthread_workqueue_attr_setqueuepriority_np(
         pthread_workqueue_attr_t *attr, int qprio)
 {
@@ -202,7 +201,7 @@ pthread_workqueue_attr_setqueuepriority_np(
  * More info:
  *   http://www.0x61.com/forum/viewtopic.php?f=109&t=997736&view=next
  */
-void
+void VISIBLE
 pthread_workqueue_main_np(void)
 {
 

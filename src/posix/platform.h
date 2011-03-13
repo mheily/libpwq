@@ -27,5 +27,7 @@
 #endif
 
 #define CONSTRUCTOR __attribute__ ((constructor))
+#define VISIBLE     __attribute__((visibility("default")))
+
 
 #endif  /* _PTWQ_POSIX_PLATFORM_H */
