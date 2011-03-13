@@ -3,10 +3,16 @@
 #     http://tldp.org/LDP/LG/issue22/using_m4.html
 #
 
-OBJS=index.html download.html
+OBJS=index.html download.html manpage.html manpage.ps
 DESTDIR=~/public_html/proj/libpthread_workqueue
 
 all: clean $(OBJS)
+
+manpage.html:
+	groff -mdoc -T html ../pthread_workqueue.3 > manpage.html
+
+manpage.ps:
+	groff -mdoc ../pthread_workqueue.3 > manpage.ps
 
 %.html:
 	m4 -P < $@.in > $@
@@ -25,4 +31,4 @@ install:
 
 upload: $(OBJS)
 	ssh heily.com rm -f $(DESTDIR)/*.html
-	scp *.html *.css heily.com:$(DESTDIR)
+	scp *.html *.css *.ps heily.com:$(DESTDIR)

@@ -13,6 +13,14 @@ It has been ported to the following platforms:<br/>
 <li>Microsoft Windows</li>
 </ul>
 
+<h2>Manual Page</h2>
+
+The manpage is available in several formats:<br/>
+<ul>
+<li><a href="manpage.html">HTML</a></li>
+<li><a href="manpage.ps">PostScript</a></li>
+</ul>
+
 <h2>Mailing Lists</h2>
 Visit the <a href="http://groups.google.com/group/libpthread_workqueue">libpthread_workqueue Google Groups page</a> to subscribe to the mailing list or view the list archives. Since the list is hosted on Google Groups, you will need to have a Google account to signup. If you prefer not to create a Google account, you can subscribe via email by sending a message to libpthread_workqueue+subscribe@googlegroups.com.  Please note that if you use multiple email addresses, Google Groups does not allow you to choose which email address will receive messages. The address on the From: line of the subscribe request will be used as the destination address.
 
