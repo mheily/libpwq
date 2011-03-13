@@ -1,3 +1,16 @@
+Version 0.4 r97
+released 3/12/2011
+---
+
+ * Improved printf debugging; to use it, define the environment variable "PWQ_DEBUG=yes"
+
+ * New function threads_runnable() determines how many LWPs are on the run queue and uses
+   this information to improve the thread pool management heuristic.
+
+ * All ELF symbols are now hidden by default, and only the public API symbols are visible.
+
+ * Improved workqueue ramp-up and ramp-down behavior.
+
 Version 0.3 r81
 released 3/6/2011
 ---
