@@ -56,6 +56,7 @@ static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
 static pthread_cond_t    manager_init_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t   manager_mtx = PTHREAD_MUTEX_INITIALIZER;
+static int               manager_has_initialized = 0;
 static pthread_attr_t    detached_attr;
 
 static struct {
@@ -122,7 +123,11 @@ manager_init(void)
 
     manager_start();
 
-    pthread_cond_wait(&manager_init_cond, &manager_mtx);
+    pthread_mutex_lock(&manager_mtx);
+    
+    while (!manager_has_initialized)
+        pthread_cond_wait(&manager_init_cond, &manager_mtx);
+    
     pthread_mutex_unlock(&manager_mtx);
     
     return (0);
@@ -311,7 +316,12 @@ manager_main(void *unused)
 
     pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
 
+    pthread_mutex_lock(&manager_mtx);
+    
+    manager_has_initialized = 1;
+    
     pthread_cond_signal(&manager_init_cond);
+    pthread_mutex_unlock(&manager_mtx);
 
     for (;;) {
 
