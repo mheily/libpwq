@@ -293,7 +293,7 @@ static void *
 manager_main(void *unused)
 {
     //struct worker *wkr;
-    unsigned int load_max = cpu_count * 2;
+    unsigned int load_max = cpu_count;
     unsigned int worker_max, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
@@ -400,6 +400,13 @@ manager_main(void *unused)
                 {
                     worker_start();
                 }
+            }
+            else // high load, allow rampup up to worker_idle_threshold regardless of this
+            {
+                if (scoreboard.count < worker_idle_threshold) 
+                {
+                    worker_start();
+                }                
             }
         }
         else
