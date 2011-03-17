@@ -98,7 +98,7 @@ int manager_init(void);
 void manager_workqueue_create(struct _pthread_workqueue *);
 void manager_workqueue_additem(struct _pthread_workqueue *, struct work *);
 
-#if !WITEM_CACHE_DISABLE
+#ifndef _WIN32
 extern pthread_key_t witem_cache_key;
 #endif
 
