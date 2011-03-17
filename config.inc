@@ -35,6 +35,13 @@ post_configure_hook() {
         cflags="$cflags -mthreads"
         ldflags="$ldflags -mthreads"
     	;;
+    solaris)
+        # TODO: would like to have -fvisibility=hidden but not supported
+        #       by SFWgcc
+        #
+        cflags="$cflags -m64 -fpic"
+    	ldflags="$ldflags -m64 -fpic"
+    	;;
     *)
         cflags="$cflags -m64 -fpic -fvisibility=hidden"
     	ldflags="$ldflags -m64 -fpic"
