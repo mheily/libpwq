@@ -32,7 +32,6 @@
  * Work item cache modelled on libdispatch continuation implementation
  */
 
-pthread_key_t witem_cache_key;
 
 #if WITEM_CACHE_DISABLE    
 
@@ -66,6 +65,8 @@ witem_cache_cleanup(void *value)
 }
 
 #else
+
+pthread_key_t witem_cache_key;
 
 struct work *
 witem_alloc_from_heap(void)

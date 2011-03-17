@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
+#include <string.h>
 
 /* Instead of __attribute__ ((constructor)), use DllMain() */
 #define CONSTRUCTOR	  /* */

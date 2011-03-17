@@ -30,6 +30,12 @@
 #ifndef _PTHREAD_WORKQUEUE_H
 #define _PTHREAD_WORKQUEUE_H
 
+#if _WIN32
+#define _PWQ_EXPORT __declspec(dllexport)
+#else
+#define _PWQ_EXPORT
+#endif
+
 typedef struct _pthread_workqueue * pthread_workqueue_t;
 typedef void *                      pthread_workitem_handle_t;
 
@@ -50,36 +56,38 @@ typedef struct {
 	extern "C" {
 #endif
 		
-int pthread_workqueue_create_np(pthread_workqueue_t * workqp,
+int _PWQ_EXPORT pthread_workqueue_create_np(pthread_workqueue_t * workqp,
                const pthread_workqueue_attr_t * attr);
 
-int pthread_workqueue_additem_np(pthread_workqueue_t workq,
+int _PWQ_EXPORT pthread_workqueue_additem_np(pthread_workqueue_t workq,
             void (*workitem_func)(void *), void * workitem_arg,
             pthread_workitem_handle_t * itemhandlep, unsigned int *gencountp);
 
-int pthread_workqueue_attr_init_np(pthread_workqueue_attr_t * attrp);
+int _PWQ_EXPORT pthread_workqueue_attr_init_np(pthread_workqueue_attr_t * attrp);
 
-int pthread_workqueue_attr_destroy_np(pthread_workqueue_attr_t * attr);
+int _PWQ_EXPORT pthread_workqueue_attr_destroy_np(pthread_workqueue_attr_t * attr);
 
-int pthread_workqueue_attr_setqueuepriority_np(pthread_workqueue_attr_t * attr,
+int _PWQ_EXPORT pthread_workqueue_attr_setqueuepriority_np(pthread_workqueue_attr_t * attr,
                    int qprio);
 
-int pthread_workqueue_attr_getovercommit_np(
+int _PWQ_EXPORT pthread_workqueue_attr_getovercommit_np(
                const pthread_workqueue_attr_t * attr, int * ocommp);
 
-int pthread_workqueue_attr_setovercommit_np(pthread_workqueue_attr_t * attr,
+int _PWQ_EXPORT pthread_workqueue_attr_setovercommit_np(pthread_workqueue_attr_t * attr,
                    int ocomm);
 
-int pthread_workqueue_requestconcurrency_np(pthread_workqueue_t workq,
+int _PWQ_EXPORT pthread_workqueue_requestconcurrency_np(pthread_workqueue_t workq,
                    int queue, int request_concurrency);
 
-int pthread_workqueue_getovercommit_np(pthread_workqueue_t workq,
+int _PWQ_EXPORT pthread_workqueue_getovercommit_np(pthread_workqueue_t workq,
                    unsigned int *ocommp);
 
-void pthread_workqueue_main_np(void);
+void _PWQ_EXPORT pthread_workqueue_main_np(void);
 
 #if defined(__cplusplus)
 	}
 #endif
 			
+#undef _PWQ_EXPORT
+
 #endif  /* _PTHREAD_WORKQUEUE_H */
