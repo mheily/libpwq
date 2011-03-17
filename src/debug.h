@@ -31,6 +31,8 @@ extern char *DEBUG_IDENT;
 # define THREAD_ID ((pid_t)  syscall(__NR_gettid))
 #elif defined(__sun)
 # define THREAD_ID (pthread_self())
+#elif defined(__FreeBSD__)  /* FIXME -- could use thr_self() */
+# define THREAD_ID (0)
 #elif defined(_WIN32)
 # define THREAD_ID (GetCurrentThreadId())
 #else 
