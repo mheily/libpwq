@@ -106,7 +106,7 @@ manager_init(void)
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++)
         LIST_INIT(&wqlist[i]);
 
-    pthread_key_create(&witem_cache_key, witem_cache_cleanup);
+    witem_cache_init();
 
     cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
 

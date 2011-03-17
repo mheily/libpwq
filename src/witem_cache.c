@@ -35,6 +35,12 @@
 
 #if WITEM_CACHE_DISABLE    
 
+int
+witem_cache_init(void)
+{
+    return (0);
+}
+
 struct work *
 witem_alloc_from_heap(void)
 {
@@ -67,6 +73,13 @@ witem_cache_cleanup(void *value)
 #else
 
 pthread_key_t witem_cache_key;
+
+int
+witem_cache_init(void)
+{
+    pthread_key_create(&witem_cache_key, witem_cache_cleanup);
+    return (0);
+}
 
 struct work *
 witem_alloc_from_heap(void)
