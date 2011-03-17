@@ -179,14 +179,14 @@ check_target() {
     "gnu/kfreebsd")
             default_target="freebsd"
             ;;
-    "mingw*")
+    mingw*)
             default_target="windows"
             default_api="windows"
             ;;
     esac
     finalize target "$default_target"
     finalize api "$default_api"
-    echo "$api-$target"
+    echo "$api"
 }
 
 check_compiler() {
