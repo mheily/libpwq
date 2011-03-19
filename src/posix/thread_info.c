@@ -213,9 +213,14 @@ int _read_file(const char *path, char *result)
         goto errout;
 	}
         
-    actual_read = read(read_fd, result, MAX_RESULT_SIZE);
 
+    actual_read = read(read_fd, result, MAX_RESULT_SIZE);
+	
+# ifdef __ia64__
     dbg_printf("read %ld from %s", actual_read, path);
+# else
+    dbg_printf("read %zd from %s", actual_read, path);
+#endif
 
     if (actual_read == 0)
     {

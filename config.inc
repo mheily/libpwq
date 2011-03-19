@@ -29,6 +29,7 @@ pre_configure_hook() {
 }
 
 post_configure_hook() {
+
     cflags="$cflags"
     case "$target" in
     windows)
@@ -43,8 +44,13 @@ post_configure_hook() {
     	ldflags="$ldflags -m64 -fpic"
     	;;
     *)
-        cflags="$cflags -m64 -fpic -fvisibility=hidden"
-    	ldflags="$ldflags -m64 -fpic"
+        if [ "`uname -m`" = "x86_64" ] ; then
+            arch_flags="-m64"
+        else
+            arch_flags=""
+        fi
+        cflags="$cflags $arch_flags -fpic -fvisibility=hidden"
+    	ldflags="$ldflags $arch_flags -fpic"
 	;;
     esac
 }
