@@ -298,7 +298,7 @@ manager_main(void *unused)
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
     int i, cond_wait_rv = 0;
-    sigset_t sigmask, oldmask;
+    sigset_t sigmask;
     struct timespec   ts;
     struct timeval    tp;
 
@@ -307,14 +307,12 @@ manager_main(void *unused)
 
     /* Block all signals */
     sigfillset(&sigmask);
-    pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);
+    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
 
     /* Create the minimum number of workers */
     scoreboard.count = 0;
     for (i = 0; i < worker_min; i++)
         worker_start();
-
-    pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
 
     pthread_mutex_lock(&manager_mtx);
     
