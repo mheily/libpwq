@@ -51,6 +51,7 @@ pthread_workqueue_init_np(void)
 	DEBUG = 1;
 #else
     DEBUG = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
+    USE_RT_THREADS = (getenv("PWQ_RT_THREADS") == NULL) ? 0 : 1;
 #endif
 
     if (manager_init() < 0)

@@ -53,6 +53,10 @@
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
 #define PTHREAD_WORKQUEUE_ATTR_SIG  0xBEBEBEBE 
 
+/* Whether to use real-time threads for the workers if available */
+
+extern int USE_RT_THREADS;
+
 #if __GNUC__
 #define fastpath(x)     ((__typeof__(x))__builtin_expect((long)(x), ~0l))
 #define slowpath(x)     ((__typeof__(x))__builtin_expect((long)(x), 0l))

@@ -31,7 +31,12 @@
 #include "private.h"
 #include "pthread_workqueue.h"
 #include "thread_info.h"
+#include "thread_rt.h"
+
 #include <sys/time.h>
+
+/* Environment setting */
+int USE_RT_THREADS = 0;
 
 /* Tunable constants */
 
@@ -143,7 +148,7 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
 
 /* The caller must hold the wqlist_mtx. */
 static struct work *
-wqlist_scan(void)
+wqlist_scan(int *queue_priority)
 {
     pthread_workqueue_t workq;
     struct work *witem = NULL;
@@ -163,6 +168,9 @@ wqlist_scan(void)
     }
 
 out:
+    if (queue_priority)
+        *queue_priority = i;
+    
     return (witem);
 }
 
@@ -184,15 +192,19 @@ worker_main(void *arg)
     struct work *witem;
     void (*func)(void *);
     void *func_arg;
-
-    dbg_puts("worker thread started");
+    int queue_priority = 0;
     
+    dbg_puts("worker thread started");
+
+    if (USE_RT_THREADS)
+        ptwq_set_current_thread_priority(WORKQ_HIGH_PRIOQUEUE); // start at highest priority possible
+        
     for (;;) {
         pthread_mutex_lock(&wqlist_mtx);
 
         self->state = WORKER_STATE_SLEEPING;
 
-        while ((witem = wqlist_scan()) == NULL)
+        while ((witem = wqlist_scan(&queue_priority)) == NULL)
             pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
 
         self->state = WORKER_STATE_RUNNING;
@@ -214,6 +226,10 @@ worker_main(void *arg)
         if (slowpath(scoreboard.idle == 0 && !scoreboard.sb_wake_pending))
             _wakeup_manager();
 
+        // If using RT threads, decrease thread prio if we aren't a high prio queue
+        if (USE_RT_THREADS && (queue_priority != WORKQ_HIGH_PRIOQUEUE))
+            ptwq_set_current_thread_priority(queue_priority);
+        
         /* Invoke the callback function, free witem first for possible reuse */
         func = witem->func;
         func_arg = witem->func_arg;
@@ -222,6 +238,10 @@ worker_main(void *arg)
         func(func_arg);    
         
         atomic_inc(&scoreboard.idle); // initial inc was one in worker_start, this is to avoid a race
+
+        // Only take the overhead and change RT priority back if it was not a high priority queue being serviced
+        if (USE_RT_THREADS && (queue_priority != WORKQ_HIGH_PRIOQUEUE))
+            ptwq_set_current_thread_priority(WORKQ_HIGH_PRIOQUEUE);
     }
 
     /* NOTREACHED */
