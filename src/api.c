@@ -29,7 +29,7 @@
 
 #include "private.h"
 
-int DEBUG = 0;
+int DEBUG_ACTIVE = 0;
 char *DEBUG_IDENT = "WQ";
 
 static int
@@ -45,12 +45,12 @@ int VISIBLE CONSTRUCTOR
 pthread_workqueue_init_np(void)
 {
 #ifdef NDEBUG
-    DEBUG = 0;
+    DEBUG_ACTIVE = 0;
 #elif _WIN32
 	/* Experimental port, always debug */
-	DEBUG = 1;
+	DEBUG_ACTIVE = 1;
 #else
-    DEBUG = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
+    DEBUG_ACTIVE = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
     USE_RT_THREADS = (getenv("PWQ_RT_THREADS") == NULL) ? 0 : 1;
 #endif
 

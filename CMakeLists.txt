@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 2.8)
 INCLUDE (CheckIncludeFiles)
 
-project(libpthreads_workqueue)
+project(libpthread_workqueue)
 
 #files
 file(GLOB_RECURSE INCL include/*.h)
@@ -51,6 +51,7 @@ else()
             -D_XOPEN_SOURCE=600
             -D_GNU_SOURCE
             -std=c99
+            -fPIC
         )
 endif()
 source_group(src FILES ${SRC})
@@ -61,14 +62,16 @@ include_directories(
 )
 
 #library
-add_library(libpthreads_workqueue SHARED ${SRC} ${INCL})
+add_library(libpthread_workqueue STATIC ${SRC} ${INCL})
 if(NOT WIN32)
-	target_link_libraries(libpthreads_workqueue pthread)
+	target_link_libraries(libpthread_workqueue pthread)
 endif()
+set_target_properties(libpthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
 
 #tests
-option(WORKQUEUE_TESTS "Enable to build tests for libpthreads_workqueue" OFF)
+option(WORKQUEUE_TESTS "Enable to build tests for libpthread_workqueue" OFF)
 if(WORKQUEUE_TESTS)
-        message("-- Adding tests for libpthreads_workqueue")
+        message("-- Adding tests for libpthread_workqueue")
 	add_subdirectory(testing)
 endif()
+

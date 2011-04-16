@@ -74,6 +74,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">include;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="src\windows\manager.c" />
+    <ClCompile Include="src\windows\platform.c" />
     <ClCompile Include="src\witem_cache.c" />
   </ItemGroup>
   <ItemGroup>
