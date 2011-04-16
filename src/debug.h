@@ -34,7 +34,7 @@ extern char *DEBUG_IDENT;
 #elif defined(__FreeBSD__)  /* FIXME -- could use thr_self() */
 # define THREAD_ID (0)
 #elif defined(_WIN32)
-# define THREAD_ID (GetCurrentThreadId())
+# define THREAD_ID (int)(GetCurrentThreadId())
 #else 
 # error Unsupported platform
 #endif

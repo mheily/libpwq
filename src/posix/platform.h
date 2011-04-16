@@ -26,7 +26,11 @@
 # define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #endif
 
-#define CONSTRUCTOR __attribute__ ((constructor))
+#ifdef MAKE_STATIC
+# define CONSTRUCTOR
+#else
+# define CONSTRUCTOR __attribute__ ((constructor))
+#endif
 #define VISIBLE     __attribute__((visibility("default")))
 
 

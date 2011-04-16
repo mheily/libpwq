@@ -84,6 +84,10 @@ int _PWQ_EXPORT pthread_workqueue_getovercommit_np(pthread_workqueue_t workq,
 
 void _PWQ_EXPORT pthread_workqueue_main_np(void);
 
+#ifdef MAKE_STATIC
+int _PWQ_EXPORT pthread_workqueue_init_np(void);
+#endif
+
 #if defined(__cplusplus)
 	}
 #endif

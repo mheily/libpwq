@@ -29,6 +29,8 @@
 #include "../private.h"
 #include "pthread_workqueue.h"
 
+#ifndef MAKE_STATIC
+
 // The constructor to be called
 int VISIBLE CONSTRUCTOR pthread_workqueue_init_np(void);
 
@@ -50,3 +52,5 @@ BOOL WINAPI DllMain(
     }
     return TRUE;  // Successful DLL_PROCESS_ATTACH.
 }
+
+#endif

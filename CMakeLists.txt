@@ -61,8 +61,14 @@ include_directories(
 	include
 )
 
-#library
-add_library(libpthread_workqueue STATIC ${SRC} ${INCL})
+#library (static or shared)
+option(STATIC_WORKQUEUE "Enable to build libpthread_workqueue as static lib" OFF)
+if(STATIC_WORKQUEUE)
+    add_definitions(-DMAKE_STATIC)
+    add_library(libpthread_workqueue STATIC ${SRC} ${INCL})
+else()
+    add_library(libpthread_workqueue SHARED ${SRC} ${INCL})
+endif()
 if(NOT WIN32)
 	target_link_libraries(libpthread_workqueue pthread)
 endif()
