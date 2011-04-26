@@ -46,12 +46,11 @@ pthread_workqueue_init_np(void)
 {
 #ifdef NDEBUG
     DEBUG_ACTIVE = 0;
-#elif _WIN32
-	/* Experimental port, always debug */
-	DEBUG_ACTIVE = 1;
 #else
     DEBUG_ACTIVE = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
+# ifndef _WIN32
     USE_RT_THREADS = (getenv("PWQ_RT_THREADS") == NULL) ? 0 : 1;
+# endif
 #endif
 
     if (manager_init() < 0)

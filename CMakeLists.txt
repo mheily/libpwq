@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 2.8)
 INCLUDE (CheckIncludeFiles)
 
-project(libpthread_workqueue)
+project(pthread_workqueue)
 
 #files
 file(GLOB_RECURSE INCL include/*.h)
@@ -46,7 +46,6 @@ else()
             src
         )
         add_definitions(
-            -DWITEM_CACHE_DISABLE=0
             -DHAVE_ERR_H=1
             -D_XOPEN_SOURCE=600
             -D_GNU_SOURCE
@@ -65,14 +64,14 @@ include_directories(
 option(STATIC_WORKQUEUE "Enable to build libpthread_workqueue as static lib" OFF)
 if(STATIC_WORKQUEUE)
     add_definitions(-DMAKE_STATIC)
-    add_library(libpthread_workqueue STATIC ${SRC} ${INCL})
+    add_library(pthread_workqueue STATIC ${SRC} ${INCL})
 else()
-    add_library(libpthread_workqueue SHARED ${SRC} ${INCL})
+    add_library(pthread_workqueue SHARED ${SRC} ${INCL})
 endif()
 if(NOT WIN32)
-	target_link_libraries(libpthread_workqueue pthread)
+	target_link_libraries(pthread_workqueue pthread)
 endif()
-set_target_properties(libpthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
+set_target_properties(pthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
 
 #tests
 option(WORKQUEUE_TESTS "Enable to build tests for libpthread_workqueue" OFF)
