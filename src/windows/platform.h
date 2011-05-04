@@ -1,7 +1,13 @@
 #ifndef _PTWQ_WINDOWS_PLATFORM_H
 #define _PTWQ_WINDOWS_PLATFORM_H 1
 
-#define _WIN32_WINNT 0x0500
+#define PROVIDE_LEGACY_XP_SUPPORT 1
+
+#ifdef PROVIDE_LEGACY_XP_SUPPORT
+# define _WIN32_WINNT 0x0500
+#else
+# define _WIN32_WINNT 0x0610
+#endif
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
@@ -44,5 +50,11 @@ typedef CRITICAL_SECTION pthread_rwlock_t;
 #define pthread_rwlock_wrlock _cs_lock
 #define pthread_rwlock_unlock _cs_unlock
 #define pthread_rwlock_init(x,y) _cs_init((x))
+
+/* Specific workqueue items */
+#define WORKQUEUE_PLATFORM_SPECIFIC \
+	PTP_POOL win_thread_pool; \
+	TP_CALLBACK_ENVIRON win_callback_env
+
 
 #endif  /* _PTWQ_WINDOWS_PLATFORM_H */

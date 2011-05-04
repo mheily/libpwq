@@ -96,6 +96,9 @@ struct _pthread_workqueue {
     LIST_ENTRY(_pthread_workqueue) wqlist_entry;
     STAILQ_HEAD(,work)   item_listhead;
     pthread_spinlock_t   mtx;
+#ifdef WORKQUEUE_PLATFORM_SPECIFIC
+	WORKQUEUE_PLATFORM_SPECIFIC;
+#endif
 };
 
 int manager_init(void);

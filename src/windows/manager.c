@@ -29,6 +29,8 @@
 #include "../private.h"
 #include "pthread_workqueue.h"
 
+#ifdef PROVIDE_LEGACY_XP_SUPPORT
+
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
 static CRITICAL_SECTION   wqlist_mtx;
 
@@ -97,3 +99,76 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 	    abort();
 }
 
+#else
+
+int
+manager_init(void)
+{
+    return (0);
+}
+
+void
+manager_workqueue_create(struct _pthread_workqueue *workq)
+{
+	PTP_POOL pool;
+	PTP_CALLBACK_ENVIRON callback;
+	SYSTEM_INFO sysinfo;
+
+	pool = CreateThreadpool(NULL);
+	if(pool == NULL){
+		dbg_lasterror("CreateThreadpool()");
+		return;
+	}
+
+	InitializeThreadpoolEnvironment(&workq->win_callback_env);
+	callback = &workq->win_callback_env;
+	SetThreadpoolCallbackPool(callback, pool);
+
+	switch(workq->queueprio){
+	case WORKQ_HIGH_PRIOQUEUE:
+		// weird but this seems the only valid solution !?
+		SetThreadpoolCallbackPriority(callback, TP_CALLBACK_PRIORITY_LOW);
+		break;
+	case WORKQ_LOW_PRIOQUEUE:
+		// see above
+		SetThreadpoolCallbackPriority(callback, TP_CALLBACK_PRIORITY_HIGH);
+		break;
+	default:
+		SetThreadpoolCallbackPriority(callback, TP_CALLBACK_PRIORITY_NORMAL);
+		break;
+	}
+
+	// we need a proper way to implement overcommitting on windows
+	if(workq->overcommit){
+		GetSystemInfo(&sysinfo);
+		SetThreadpoolThreadMaximum(pool, sysinfo.dwNumberOfProcessors * 2);
+	}
+
+	workq->win_thread_pool = pool;
+}
+
+VOID CALLBACK 
+worker_main( PTP_CALLBACK_INSTANCE instance, PVOID Parameter, PTP_WORK work )
+{
+	struct work* witem = (struct work*)Parameter;
+
+    assert(witem);
+	witem->func(witem->func_arg);
+    free(witem);
+	CloseThreadpoolWork(work);
+}
+
+void
+manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
+{
+	PTP_WORK work = CreateThreadpoolWork(worker_main, witem, &workq->win_callback_env);
+	if(work == NULL) {
+		dbg_lasterror("CreateThreadpoolWork()");
+		return;
+	}
+	SubmitThreadpoolWork(work);
+}
+
+// TODO: We need to cleanly close the environment and threadpools!
+
+#endif
