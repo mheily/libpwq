@@ -103,13 +103,13 @@ rpm: clean $(DISTFILE)
 
 deb: clean $(DISTFILE)
 	mkdir pkg
-	cd pkg && tar zxf ../$(DISTFILE) 
-	cp $(DISTFILE) pkg/$(PROGRAM)_$(VERSION).orig.tar.gz
-	cp -R ports/debian pkg/$(PROGRAM)-$(VERSION) 
+	cd pkg && tar zxf ../$(DISTFILE) && mv libpthread_workqueue-$(VERSION) libpthread-workqueue-$(VERSION)
+	cp $(DISTFILE) pkg/libpthread-workqueue_$(VERSION).orig.tar.gz
+	cp -R ports/debian pkg/libpthread-workqueue-$(VERSION) 
 	cd pkg && \
-	rm -rf `find $(PROGRAM)-$(VERSION)/debian -type d -name .svn` ; \
-	perl -pi -e 's/\@\@VERSION\@\@/$(VERSION)/' $(PROGRAM)-$(VERSION)/debian/changelog ; \
-	cd $(PROGRAM)-$(VERSION) && dpkg-buildpackage $(DPKGFLAGS)
+	rm -rf `find libpthread-workqueue-$(VERSION)/debian -type d -name .svn` ; \
+	perl -pi -e 's/\@\@VERSION\@\@/$(VERSION)/' libpthread-workqueue-$(VERSION)/debian/changelog ; \
+	cd libpthread-workqueue-$(VERSION) && dpkg-buildpackage $(DPKGFLAGS)
 	lintian -i pkg/*.deb
 	@printf "\nThe following packages have been created:\n"
 	@find ./pkg -name '*.deb' | sed 's/^/    /'
