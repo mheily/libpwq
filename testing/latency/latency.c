@@ -152,7 +152,7 @@ static void _event_tick(void* context)
 
 static void _generate_simulated_events()
 {
-	long i, tick, ticks_generated = 0, overhead;
+	long i, tick, overhead;
     mytime_t start, current, overhead_start = 0, overhead_end = 0;
 
     start = current = gettime();
@@ -229,7 +229,6 @@ static void _gather_statistics(unsigned long queue_index)
 void _print_statistics()
 {
 	unsigned long i, j, total_events = 0, last_percentile = 0, accumulated_percentile = 0;
-	void *events_done;
         
 	printf("Collecting statistics...\n");
 	

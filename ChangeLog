@@ -1,3 +1,9 @@
+Version 0.5.1 r123
+released 5/7/2011
+---
+
+ * Fix the testing/latency Makefile to work on 32-bit Linux.
+
 Version 0.5 r120
 released 5/6/2011
 ---
