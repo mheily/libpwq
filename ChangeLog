@@ -1,3 +1,27 @@
+Version 0.5 r120
+released 5/6/2011
+---
+
+ * Add CMakeLists.txt for building under CMake.
+
+ * Support building on Windows under MinGW and MSVC.
+
+ * Fixed a deadlock during startup. We could actually raise and get a lost wakeup of the pthread_cond_wait  in manager_init() as the manager already managed to signal before we went to sleep. (happened around 1/1000 of startups on a large multicore).
+
+ * Finetune ramp-up logic when system is under heavy load - allow up to worker_idle_threshold threads regardless of system load, otherwise limit thread creation when system is under NCPU:s load rather than 2*NCPU:s (it is way too late to limit it on a larger multicore machine...).
+
+ * Create a witem_cache_init() function so that the TLS key can be made private to witem_cache.o
+
+ * Fix compilation on 32-bit Linux (Credit: Marius Zwicker)
+
+ * Don't reset the signal mask, it should be blocked for the manager thread (and any subsequently started threads) as well
+
+ * Enabled experimental support for real-time threads scheduling class on Solaris, specify PWQ_RT_THREADS to enable it. Be careful when using, may take all available resources unless used in combination with processor sets, thus effectivively hanging the machine
+
+ * Add option for static library build activated by defining MAKE_STATIC
+
+ * Enable debugging on windows by an environment variable as well
+
 Version 0.4.1 r99
 released 3/13/2011
 ---

@@ -82,7 +82,7 @@ void
 run_blocking_test(void)
 {
 	const int rounds = 50;
-	int i = 0;
+	long i = 0;
 	work_cnt = rounds;
     for (i = 0; i < rounds; i++) {
         additem(lazy, (void *) i);
@@ -95,7 +95,7 @@ void
 run_cond_wait_test(void)
 {
 	const int rounds = 10;
-	int i = 0;
+	long i = 0;
 
 	sleep(3);	/* Allow time for the workers to enter pthread_cond_wait() */
 	work_cnt = rounds;
