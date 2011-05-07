@@ -14,6 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+# Flags to pass to dpkg-buildpackage
+DPKGFLAGS=-uc -us
+
 .PHONY :: install uninstall check dist dist-upload publish-www clean merge distclean fresh-build rpm edit cscope valgrind
 
 include config.mk
@@ -69,14 +72,17 @@ $(PROGRAM)-$(VERSION).tar.gz:
 
 dist: clean $(PROGRAM)-$(VERSION).tar.gz
 
-dist-upload: dist
-	scp $(PROGRAM)-$(VERSION).tar.gz heily.com:~/public_html/proj/$(PROGRAM)/dist
+%.asc:
+	gpg --armor --detach-sign `echo '$@' | sed 's/.asc$$//'`
+
+dist-upload: dist $(DISTFILE).asc
+	scp $(DISTFILE) $(DISTFILE).asc heily.com:/var/www/heily.com/dist/$(PROGRAM)
 
 publish-www:
 	cp -R www/* ~/public_html/libkqueue/
 
 clean:
-	rm -f tags $(PROGRAM)-$(VERSION).tar.gz *.a $(OBJS) *.pc *.so *.so.* test-$(PROGRAM)
+	rm -f tags $(DISTFILE) $(DISTFILE).asc *.a $(OBJS) *.pc *.so *.so.* test-$(PROGRAM)
 	cd testing && make clean
 	rm -rf pkg
 
@@ -103,7 +109,7 @@ deb: clean $(DISTFILE)
 	cd pkg && \
 	rm -rf `find $(PROGRAM)-$(VERSION)/debian -type d -name .svn` ; \
 	perl -pi -e 's/\@\@VERSION\@\@/$(VERSION)/' $(PROGRAM)-$(VERSION)/debian/changelog ; \
-	cd $(PROGRAM)-$(VERSION) && dpkg-buildpackage -uc -us
+	cd $(PROGRAM)-$(VERSION) && dpkg-buildpackage $(DPKGFLAGS)
 	lintian -i pkg/*.deb
 	@printf "\nThe following packages have been created:\n"
 	@find ./pkg -name '*.deb' | sed 's/^/    /'
