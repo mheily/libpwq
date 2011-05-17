@@ -59,9 +59,9 @@ static pthread_mutex_t   wqlist_mtx;
 
 static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
-static pthread_cond_t    manager_init_cond = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t   manager_mtx = PTHREAD_MUTEX_INITIALIZER;
-static int               manager_has_initialized = 0;
+static pthread_cond_t    manager_init_cond;
+static pthread_mutex_t   manager_mtx;
+static int               manager_has_initialized;
 static pthread_attr_t    detached_attr;
 
 static struct {
@@ -101,11 +101,23 @@ worker_idle_threshold_per_cpu()
     return 2;
 }
 
+void
+manager_reinit(void)
+{
+    if (manager_init() < 0)
+        abort();
+}
+
 int
 manager_init(void)
 {
     int i;
 
+    wqlist_has_manager = 0;
+    pthread_cond_init(&wqlist_has_work, NULL);
+    pthread_cond_init(&manager_init_cond, NULL);
+    pthread_mutex_init(&manager_mtx, NULL);
+    manager_has_initialized = 0;
     LIST_INIT(&workers);
     pthread_mutex_init(&wqlist_mtx, NULL);
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++)
@@ -135,6 +147,11 @@ manager_init(void)
     
     pthread_mutex_unlock(&manager_mtx);
     
+    if (pthread_atfork(NULL, NULL, manager_reinit) < 0) {
+        dbg_perror("pthread_atfork()");
+        return (-1);
+    }
+
     return (0);
 }
 

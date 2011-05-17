@@ -4,6 +4,7 @@
 #include <string.h>
 
 #if !defined(_WIN32)
+# include <sys/wait.h>
 # if !defined(NO_CONFIG_H)
 #  include "config.h"
 # endif
@@ -134,6 +135,48 @@ run_stress_test(int rounds)
     puts("====== stress test complete =======");
 }
 
+/*
+ * Ensure that the library is reinitialized after fork(2) is called.
+ */
+void
+run_fork_test(void)
+{
+#if !defined(_WIN32)
+    pid_t pid;
+    int   rv, status, timeout;
+
+    puts("fork test...");
+    pid = fork();
+    if (pid < 0) 
+        err(1, "fork");
+
+    if (pid == 0) {
+        /* Child */
+        wq = NULL;
+        rv = pthread_workqueue_create_np(&wq, NULL);
+        if (rv < 0)
+            errx(1, "pthread_workqueue_create_np");
+        work_cnt = 1;
+        timeout = 5;
+        additem(compute, &work_cnt);
+        while (work_cnt > 0) {
+            sleep(1);
+            if (--timeout == 0)
+                errx(1, "work was not completed");
+        }
+        exit(0);
+    } else {
+        /* Parent */
+        if (wait(&status) != pid) 
+            err(1, "waitpid");
+        if (WEXITSTATUS(status) != 0) 
+            errx(1, "fork test failed");
+        puts("fork test: PASSED");
+    }
+#else
+    puts("fork test... N/A");
+#endif
+}
 
 int main() {
     int rv;
@@ -147,6 +190,8 @@ int main() {
     printf("stress test.. ");
     run_stress_test(25);
     printf("ok\n");
+
+    run_fork_test();
 
     //run_deadlock_test();
 //    run_cond_wait_test();
