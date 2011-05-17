@@ -1,3 +1,11 @@
+Version 0.6 r132
+released 5/16/2011
+---
+
+ * Add a pthread_atfork() handler to reinitialize the library after fork().
+
+ * Defer the manager thread creation until pthread_workqueue_create_np().
+
 Version 0.5.1 r125
 released 5/7/2011
 ---
