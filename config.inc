@@ -49,8 +49,8 @@ post_configure_hook() {
         else
             arch_flags=""
         fi
-        cflags="$cflags $arch_flags -fpic -fvisibility=hidden"
-    	ldflags="$ldflags $arch_flags -fpic"
+        cflags="$cflags $arch_flags -fpic -fvisibility=hidden -pthread"
+    	ldflags="$ldflags $arch_flags -fpic -pthread"
 	;;
     esac
 }
