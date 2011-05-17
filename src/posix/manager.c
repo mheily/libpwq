@@ -138,15 +138,6 @@ manager_init(void)
     worker_min = 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
     worker_idle_threshold = worker_idle_threshold_per_cpu();
 
-    manager_start();
-
-    pthread_mutex_lock(&manager_mtx);
-    
-    while (!manager_has_initialized)
-        pthread_cond_wait(&manager_init_cond, &manager_mtx);
-    
-    pthread_mutex_unlock(&manager_mtx);
-    
     if (pthread_atfork(NULL, NULL, manager_reinit) < 0) {
         dbg_perror("pthread_atfork()");
         return (-1);
@@ -159,6 +150,8 @@ void
 manager_workqueue_create(struct _pthread_workqueue *workq)
 {
     pthread_mutex_lock(&wqlist_mtx);
+    if (!wqlist_has_manager)
+        manager_start();
     LIST_INSERT_HEAD(&wqlist[workq->queueprio], workq, wqlist_entry);
     pthread_mutex_unlock(&wqlist_mtx);
 }
@@ -293,8 +286,8 @@ worker_start(void)
     return (0);
 }
 
-//static int
-int
+static int
+//int
 worker_stop(void) 
 {
     struct work *witem;
@@ -514,9 +507,6 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 {
     /* TODO: possibly use a separate mutex or some kind of atomic CAS */
     pthread_mutex_lock(&wqlist_mtx);
-
-    if (!wqlist_has_manager)
-        manager_start();
 
     pthread_spin_lock(&workq->mtx);
     STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);

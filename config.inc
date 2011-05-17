@@ -1,5 +1,5 @@
 program="libpthread_workqueue"
-version="0.5.1"
+version="0.6"
 abi_major="0"
 abi_minor="0"
 abi_version="$abi_major.$abi_minor"

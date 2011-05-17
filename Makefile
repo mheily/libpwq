@@ -60,7 +60,7 @@ check: $(PROGRAM).so
 	cd testing && make check
 
 edit:
-	$(EDITOR) `find ./ -name '*.c' -o -name '*.h'` Makefile
+	$(EDITOR) `find ./src -name '*.c' -o -name '*.h'` Makefile
 
 $(PROGRAM)-$(VERSION).tar.gz: 
 	mkdir $(PROGRAM)-$(VERSION)

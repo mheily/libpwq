@@ -192,38 +192,3 @@ pthread_workqueue_attr_setqueuepriority_np(
     } else
         return (EINVAL);
 }
-
-/*
- * Does not exist in the Apple implementation, but needed on Linux
- * due to a kernel bug that causes the process to become a zombie when
- * the main thread calls pthread_exit().
- *
- * More info:
- *   http://www.0x61.com/forum/viewtopic.php?f=109&t=997736&view=next
- */
-void VISIBLE
-pthread_workqueue_main_np(void)
-{
-
-    //TESTING - dispatch testsuite requires this..
-#ifndef _WIN32
-	pthread_exit(0);
-#endif
-
-    /* 
-    struct worker w;
-    pthread_mutex_lock(&wqlist_mtx);
-    if (wqlist_has_manager) {
-        pthread_mutex_unlock(&wqlist_mtx);
-        dbg_puts("running as a worker");
-        memset(&w, 0, sizeof(w));
-        worker_main(&w);
-    } else {
-        wqlist_has_manager = 1;
-        pthread_mutex_unlock(&wqlist_mtx);
-
-        dbg_puts("running as a manager");
-        manager_main(NULL);
-    }
-    */
-}
