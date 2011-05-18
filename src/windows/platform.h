@@ -12,6 +12,7 @@
 
 #include <windows.h>
 #include <string.h>
+#include "pthread_cond.h"
 
 /* Instead of __attribute__ ((constructor)), use DllMain() */
 #define CONSTRUCTOR	  /* */
