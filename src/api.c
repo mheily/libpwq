@@ -67,7 +67,7 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
     pthread_workqueue_t workq;
 
     if ((attr != NULL) && ((attr->sig != PTHREAD_WORKQUEUE_ATTR_SIG) ||
-         (attr->queueprio < 0) || (attr->queueprio > WORKQ_NUM_PRIOQUEUE)))
+         (attr->queueprio < 0) || (attr->queueprio >= WORKQ_NUM_PRIOQUEUE)))
         return (EINVAL);
     if ((workq = calloc(1, sizeof(*workq))) == NULL)
         return (ENOMEM);
