@@ -172,7 +172,6 @@ wqlist_scan(int *queue_priority)
             witem = STAILQ_FIRST(&workq->item_listhead);
             if (witem != NULL)
                 STAILQ_REMOVE_HEAD(&workq->item_listhead, item_entry);
-            pthread_mutex_unlock(&wqlist_mtx);
             goto out;
         }
     }
@@ -210,12 +209,15 @@ worker_main(void *arg)
         ptwq_set_current_thread_priority(WORKQ_HIGH_PRIOQUEUE); // start at highest priority possible
         
     for (;;) {
-        pthread_mutex_lock(&wqlist_mtx);
 
         self->state = WORKER_STATE_SLEEPING;
 
+        pthread_mutex_lock(&wqlist_mtx);
+
         while ((witem = wqlist_scan(&queue_priority)) == NULL)
             pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
+
+        pthread_mutex_unlock(&wqlist_mtx);
 
         self->state = WORKER_STATE_RUNNING;
 
