@@ -41,7 +41,7 @@ post_configure_hook() {
         #       by SFWgcc
         #
         cflags="$cflags -m64 -fpic"
-    	ldflags="$ldflags -m64 -fpic"
+    	ldflags="$ldflags -m64 -fpic -lumem"
     	;;
     *)
         if [ "`uname -m`" = "x86_64" ] ; then
