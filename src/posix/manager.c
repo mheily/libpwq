@@ -296,10 +296,7 @@ worker_stop(void)
     pthread_workqueue_t workq;
     int i;
 
-    witem = fastpath(witem_alloc_cacheonly());
-    if (!witem)
-        witem = fastpath(witem_alloc_from_heap());
-    memset(witem, 0, sizeof(*witem));
+    witem = witem_alloc(NULL, NULL);
 
     pthread_mutex_lock(&wqlist_mtx);
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++) {

@@ -67,7 +67,17 @@ extern int USE_RT_THREADS;
 
 #define CACHELINE_SIZE	64
 #define ROUND_UP_TO_CACHELINE_SIZE(x)	(((x) + (CACHELINE_SIZE - 1)) & ~(CACHELINE_SIZE - 1))
-#define WITEM_CACHE_DISABLE 1
+
+/*
+ * The work item cache, has three different optional implementations:
+ * 1. No cache, just normal malloc/free using the standard malloc library in use
+ * 2. Libumem based object cache, requires linkage with libumem - for non-Solaris see http://labs.omniti.com/labs/portableumem
+ *    this is the most balanced cache supporting migration across threads of allocated/freed witems
+ * 3. TSD based cache, modelled on libdispatch continuation implementation, can lead to imbalance with assymetric 
+ *    producer/consumer threads as allocated memory is cached by the thread freeing it
+ */
+
+#define WITEM_CACHE_TYPE 1 // Set to 1, 2 or 3 to specify witem cache implementation to use
 
 struct work {
     STAILQ_ENTRY(work)   item_entry; 
@@ -75,7 +85,9 @@ struct work {
     void                *func_arg;
     unsigned int         flags;
     unsigned int         gencount;
+#if (WITEM_CACHE_TYPE == 3)
 	struct work *volatile wi_next;
+#endif
 };
 
 struct worker {
@@ -105,8 +117,7 @@ int manager_init(void);
 void manager_workqueue_create(struct _pthread_workqueue *);
 void manager_workqueue_additem(struct _pthread_workqueue *, struct work *);
 
-struct work *witem_alloc_from_heap(void);
-struct work *witem_alloc_cacheonly();
+struct work *witem_alloc(void (*func)(void *), void *func_arg); // returns a properly initialized witem
 void witem_free(struct work *wi);
 int witem_cache_init(void);
 void witem_cache_cleanup(void *value);
