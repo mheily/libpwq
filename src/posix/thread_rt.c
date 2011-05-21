@@ -77,7 +77,7 @@ void ptwq_set_current_thread_priority(int priority)
 
 #else
 
-void ptwq_set_current_thread_priority(int priority)
+void ptwq_set_current_thread_priority(int priority  __attribute__ ((unused)))
 {    
     return;
 }

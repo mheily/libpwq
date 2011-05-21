@@ -3,7 +3,7 @@ version="0.6"
 abi_major="0"
 abi_minor="0"
 abi_version="$abi_major.$abi_minor"
-cflags="-Wall -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src"
+cflags="-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src"
 ldflags="-lpthread"
 sources='src/api.c src/$(API)/manager.c src/$(API)/thread_info.c src/witem_cache.c src/$(API)/thread_rt.c'
 libdepends=""

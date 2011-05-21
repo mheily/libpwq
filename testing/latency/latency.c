@@ -152,7 +152,7 @@ static void _event_tick(void* context)
 
 static void _generate_simulated_events()
 {
-	long i, tick, overhead;
+	unsigned long i, tick, overhead;
     mytime_t start, current, overhead_start = 0, overhead_end = 0;
 
     start = current = gettime();
@@ -271,7 +271,7 @@ void _print_statistics()
 }	
 
 
-int main(int argc, const char * argv[])
+int main(void)
 {
 	int i;
     pthread_workqueue_attr_t attr;

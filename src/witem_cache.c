@@ -64,7 +64,7 @@ witem_free(struct work *wi)
 }
 
 void
-witem_cache_cleanup(void *value)
+witem_cache_cleanup(void *value __attribute__ ((unused)))
 {
 }
 

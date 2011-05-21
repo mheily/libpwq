@@ -319,14 +319,15 @@ worker_stop(void)
 }
 
 static void *
-manager_main(void *unused)
+manager_main(void *unused __attribute__ ((unused)))
 {
     //struct worker *wkr;
     unsigned int load_max = cpu_count;
     unsigned int worker_max, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
-    int i, cond_wait_rv = 0;
+    unsigned int i;
+    int cond_wait_rv = 0;
     sigset_t sigmask;
     struct timespec   ts;
     struct timeval    tp;
