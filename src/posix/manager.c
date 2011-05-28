@@ -59,9 +59,6 @@ static pthread_mutex_t   wqlist_mtx;
 
 static pthread_cond_t    wqlist_has_work;
 static int               wqlist_has_manager;
-static pthread_cond_t    manager_init_cond;
-static pthread_mutex_t   manager_mtx;
-static int               manager_has_initialized;
 static pthread_attr_t    detached_attr;
 
 static struct {
@@ -115,9 +112,7 @@ manager_init(void)
 
     wqlist_has_manager = 0;
     pthread_cond_init(&wqlist_has_work, NULL);
-    pthread_cond_init(&manager_init_cond, NULL);
-    pthread_mutex_init(&manager_mtx, NULL);
-    manager_has_initialized = 0;
+
     LIST_INIT(&workers);
     pthread_mutex_init(&wqlist_mtx, NULL);
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++)
@@ -343,13 +338,6 @@ manager_main(void *unused __attribute__ ((unused)))
     scoreboard.count = 0;
     for (i = 0; i < worker_min; i++)
         worker_start();
-
-    pthread_mutex_lock(&manager_mtx);
-    
-    manager_has_initialized = 1;
-    
-    pthread_cond_signal(&manager_init_cond);
-    pthread_mutex_unlock(&manager_mtx);
 
     for (;;) {
 
