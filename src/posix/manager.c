@@ -45,6 +45,7 @@ int USE_RT_THREADS = 0;
 /* Function prototypes */
 static unsigned int get_load_average(void);
 static void * worker_main(void *arg);
+static void * overcommit_worker_main(void *arg);
 static unsigned int get_process_limit(void);
 static void manager_start(void);
 
@@ -54,7 +55,16 @@ static LIST_HEAD(, worker) workers;
 static unsigned int      worker_min;
 static unsigned int      worker_idle_threshold; // we don't go down below this if we had to increase # workers
 
-static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
+/* Overcommit */
+static struct _pthread_workqueue *ocwq[PTHREAD_WORKQUEUE_MAX];
+static int               ocwq_mask;
+static pthread_mutex_t   ocwq_mtx;
+static pthread_cond_t    ocwq_has_work;
+static unsigned int      ocwq_idle_threads;
+
+/* Non-overcommit */
+static struct _pthread_workqueue *wqlist[PTHREAD_WORKQUEUE_MAX];
+static int               wqlist_mask;
 static pthread_mutex_t   wqlist_mtx;
 
 static pthread_cond_t    wqlist_has_work;
@@ -108,15 +118,17 @@ manager_reinit(void)
 int
 manager_init(void)
 {
-    int i;
-
     wqlist_has_manager = 0;
     pthread_cond_init(&wqlist_has_work, NULL);
 
     LIST_INIT(&workers);
     pthread_mutex_init(&wqlist_mtx, NULL);
-    for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++)
-        LIST_INIT(&wqlist[i]);
+    wqlist_mask = 0;
+
+    pthread_cond_init(&ocwq_has_work, NULL);
+    pthread_mutex_init(&ocwq_mtx, NULL);
+    ocwq_mask = 0;
+    ocwq_idle_threads = 0;
 
     witem_cache_init();
 
@@ -145,9 +157,26 @@ void
 manager_workqueue_create(struct _pthread_workqueue *workq)
 {
     pthread_mutex_lock(&wqlist_mtx);
-    if (!wqlist_has_manager)
+    if (!workq->overcommit && !wqlist_has_manager)
         manager_start();
-    LIST_INSERT_HEAD(&wqlist[workq->queueprio], workq, wqlist_entry);
+
+    if (workq->overcommit) {
+        if (ocwq[workq->queueprio] == NULL) {
+            ocwq[workq->queueprio] = workq;
+            workq->wqlist_index = workq->queueprio;
+        } else {
+            puts("queue already exists\n");
+            abort();
+        }
+    } else {
+        if (wqlist[workq->queueprio] == NULL) {
+            wqlist[workq->queueprio] = workq; //FIXME: sort by priority
+            workq->wqlist_index = workq->queueprio;
+        } else {
+            puts("queue already exists\n");
+            abort();
+        }
+    }
     pthread_mutex_unlock(&wqlist_mtx);
 }
 
@@ -156,26 +185,25 @@ static struct work *
 wqlist_scan(int *queue_priority)
 {
     pthread_workqueue_t workq;
-    struct work *witem = NULL;
-    int i;
+    struct work *witem;
+    int idx;
 
-    for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++) {
-        LIST_FOREACH(workq, &wqlist[i], wqlist_entry) {
-            if (STAILQ_EMPTY(&workq->item_listhead))
-            continue;
+    idx = ffs(wqlist_mask);
+    if (idx == 0)
+        return (NULL);
 
-            witem = STAILQ_FIRST(&workq->item_listhead);
-            if (witem != NULL)
-                STAILQ_REMOVE_HEAD(&workq->item_listhead, item_entry);
-            goto out;
-        }
+    workq = wqlist[idx - 1];
+    witem = STAILQ_FIRST(&workq->item_listhead);
+    if (witem != NULL) {
+        STAILQ_REMOVE_HEAD(&workq->item_listhead, item_entry);
+        if (STAILQ_EMPTY(&workq->item_listhead))
+            wqlist_mask &= ~(0x1 << workq->wqlist_index);
+        if (queue_priority != NULL)
+            *queue_priority = workq->queueprio;
+        return (witem);
+    } else {
+        return (NULL);
     }
-
-out:
-    if (queue_priority)
-        *queue_priority = i;
-    
-    return (witem);
 }
 
 static void _wakeup_manager()
@@ -187,6 +215,67 @@ static void _wakeup_manager()
     pthread_cond_signal(&scoreboard.sb_wake_cond);
     pthread_mutex_unlock(&scoreboard.sb_wake_mtx);
     return;
+}
+
+static void *
+overcommit_worker_main(void *arg)
+{
+    struct timespec ts;
+    pthread_workqueue_t workq;
+    void (*func)(void *);
+    void *func_arg;
+    struct work *witem;
+    int rv, idx;
+
+    (void)arg;
+     
+    pthread_mutex_lock(&ocwq_mtx);
+
+    for (;;) {
+        /* Find the highest priority workqueue that is non-empty */
+        idx = ffs(ocwq_mask);
+        if (idx > 0) {
+            workq = ocwq[idx - 1];
+            witem = STAILQ_FIRST(&workq->item_listhead);
+            if (witem != NULL) {
+                /* Remove the first work item */
+                STAILQ_REMOVE_HEAD(&workq->item_listhead, item_entry);
+                if (STAILQ_EMPTY(&workq->item_listhead))
+                    ocwq_mask &= ~(0x1 << workq->wqlist_index);
+                /* Execute the work item */
+                pthread_mutex_unlock(&ocwq_mtx);
+                func = witem->func;
+                func_arg = witem->func_arg;
+                witem_free(witem);
+                func(func_arg);    
+                pthread_mutex_lock(&ocwq_mtx);
+                continue;
+            }
+        }
+
+        /* Wait for more work to be available. */
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += 15;
+        ocwq_idle_threads++;
+        dbg_printf("waiting for work (idle=%d)", ocwq_idle_threads);
+        rv = pthread_cond_timedwait(&ocwq_has_work, &ocwq_mtx, &ts);
+        if (rv < 0) {
+            /* Normally, the signaler will decrement the idle counter,
+               but this path is not taken in response to a signaler.
+             */
+            ocwq_idle_threads--;
+            if (errno == ETIMEDOUT) {
+                dbg_puts("timeout, no work available");
+                break;
+            } else {
+                dbg_perror("pthread_cond_timedwait");
+                //TODO: some kind of crash mechanism
+                break;
+            }
+        }
+    }
+
+    pthread_exit(NULL);
 }
 
 static void *
@@ -294,8 +383,8 @@ worker_stop(void)
     witem = witem_alloc(NULL, NULL);
 
     pthread_mutex_lock(&wqlist_mtx);
-    for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++) {
-        workq = LIST_FIRST(&wqlist[i]);
+    for (i = 0; i < PTHREAD_WORKQUEUE_MAX; i++) {
+        workq = wqlist[i];
         if (workq == NULL)
             continue;
 
@@ -493,15 +582,34 @@ manager_start(void)
 void
 manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 {
-    /* TODO: possibly use a separate mutex or some kind of atomic CAS */
-    pthread_mutex_lock(&wqlist_mtx);
+    if (workq->overcommit) {
+        pthread_t tid;
 
-    pthread_spin_lock(&workq->mtx);
-    STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
-    pthread_spin_unlock(&workq->mtx);
+        pthread_mutex_lock(&ocwq_mtx);
+        pthread_spin_lock(&workq->mtx);
+        STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
+        pthread_spin_unlock(&workq->mtx);
+        ocwq_mask |= (0x1 << workq->wqlist_index);
+        if (ocwq_idle_threads > 0) {
+            dbg_puts("signaling an idle worker");
+            pthread_cond_signal(&ocwq_has_work);
+            ocwq_idle_threads--;
+        } else {
+            (void)pthread_create(&tid, &detached_attr, overcommit_worker_main, NULL);
+        }
+        pthread_mutex_unlock(&ocwq_mtx);
+    } else {
+        /* TODO: possibly use a separate mutex or some kind of atomic CAS */
+        pthread_mutex_lock(&wqlist_mtx);
 
-    pthread_cond_signal(&wqlist_has_work);
-    pthread_mutex_unlock(&wqlist_mtx);
+        pthread_spin_lock(&workq->mtx);
+        STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
+        pthread_spin_unlock(&workq->mtx);
+
+        wqlist_mask |= (0x1 << workq->wqlist_index);
+        pthread_cond_signal(&wqlist_has_work);
+        pthread_mutex_unlock(&wqlist_mtx);
+    }
 }
 
 

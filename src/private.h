@@ -46,6 +46,11 @@
 #include "pthread_workqueue.h"
 #include "debug.h"
 
+/* The maximum number of workqueues that can be created.
+   This is based on libdispatch only needing 6 workqueues.
+   */
+#define PTHREAD_WORKQUEUE_MAX 31
+
 /* The total number of priority levels. */
 #define WORKQ_NUM_PRIOQUEUE 3
 
@@ -105,7 +110,7 @@ struct _pthread_workqueue {
     unsigned int         flags;
     int                  queueprio;
     int                  overcommit;
-    LIST_ENTRY(_pthread_workqueue) wqlist_entry;
+    unsigned int         wqlist_index;
     STAILQ_HEAD(,work)   item_listhead;
     pthread_spinlock_t   mtx;
 #ifdef WORKQUEUE_PLATFORM_SPECIFIC
@@ -113,6 +118,7 @@ struct _pthread_workqueue {
 #endif
 };
 
+/* manager.c */
 int manager_init(void);
 void manager_workqueue_create(struct _pthread_workqueue *);
 void manager_workqueue_additem(struct _pthread_workqueue *, struct work *);

@@ -55,7 +55,7 @@ pthread_workqueue_init_np(void)
 
     if (manager_init() < 0)
         return (-1);
- 
+
     dbg_puts("pthread_workqueue library initialized");
     return (0);
 }
