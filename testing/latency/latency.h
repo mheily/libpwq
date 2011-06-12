@@ -22,7 +22,7 @@
 
 // Run settings
 #define SECONDS_TO_RUN 10
-#define WORKQUEUE_COUNT 6
+#define WORKQUEUE_COUNT 3
 #define GENERATOR_WORKQUEUE_COUNT 1
 #define SLEEP_BEFORE_START 0
 #define FORCE_BUSY_LOOP 0

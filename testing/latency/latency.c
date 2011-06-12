@@ -270,7 +270,6 @@ void _print_statistics()
 	return;
 }	
 
-
 int main(void)
 {
 	int i;
@@ -291,11 +290,14 @@ int main(void)
     if (pthread_workqueue_attr_init_np(&attr) != 0)
         fprintf(stderr, "Failed to set workqueue attributes\n");
     
-    if (pthread_workqueue_attr_setqueuepriority_np(&attr, WORKQ_HIGH_PRIOQUEUE) != 0) // high prio for generators
-        fprintf(stderr, "Failed to set workqueue priority\n");
-
     for (i = 0; i < GENERATOR_WORKQUEUE_COUNT; i++)
     {
+        if (pthread_workqueue_attr_setqueuepriority_np(&attr, i) != 0) 
+            fprintf(stderr, "Failed to set workqueue priority\n");
+
+        if (pthread_workqueue_attr_setovercommit_np(&attr, 1) != 0)
+            fprintf(stderr, "Failed to set workqueue overcommit\n");
+
         workqueue_generator[i].wq_events = malloc(sizeof(struct wq_event) * EVENTS_GENERATED_PER_TICK);
         memset(workqueue_generator[i].wq_events, 0, (sizeof(struct wq_event) * EVENTS_GENERATED_PER_TICK));
         
@@ -308,7 +310,7 @@ int main(void)
         if (pthread_workqueue_attr_init_np(&attr) != 0)
             fprintf(stderr, "Failed to set workqueue attributes\n");
         
-        if (pthread_workqueue_attr_setqueuepriority_np(&attr, (i % (WORKQ_LOW_PRIOQUEUE + 1))) != 0) // spread it round-robin in terms of prio
+        if (pthread_workqueue_attr_setqueuepriority_np(&attr, i) != 0) 
             fprintf(stderr, "Failed to set workqueue priority\n");
         
         if (pthread_workqueue_create_np(&workqueues[i], &attr) != 0)
