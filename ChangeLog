@@ -1,3 +1,26 @@
+Version 0.7 r150
+released 6/13/2011
+---
+
+ * Replace pthread emulation macros with winpthreads.h from 
+   http://locklessinc.com/articles/pthreads_on_windows/
+ 
+ * Fix witem_cache test to link on solaris also
+
+ * Avoid possible overrun of priority level
+
+ * Fixed possible deadlock.
+
+ * Cleaned up witem cache interface and usage for easier reading of code.
+
+ * Link with libumem on Solaris
+
+ * Add -Wextra to CFLAGS and fix the related warnings
+
+ * Implement the workqueue overcommit attribute.
+   Make wqlist an array instead of an array of lists.
+   Change wqlist_scan() to be more efficient.
+
 Version 0.6 r134
 released 5/16/2011
 ---
