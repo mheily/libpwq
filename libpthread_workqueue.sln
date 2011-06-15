@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual C++ Express 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpthread_workqueue", "libpthread_workqueue.vcxproj", "{65F3E6CC-43E1-42D0-32DF-5DA6183DF9CE}"
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpthread_workqueue", "libpthread_workqueue.vcxproj", "{CDDBF8A5-5FBC-8F00-763A-D20BE56E3023}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,8 +9,8 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{65F3E6CC-43E1-42D0-32DF-5DA6183DF9CE}.Debug|Win32.ActiveCfg = Debug|Win32
-		{65F3E6CC-43E1-42D0-32DF-5DA6183DF9CE}.Release|Win32.ActiveCfg = Release|Win32
+		{CDDBF8A5-5FBC-8F00-763A-D20BE56E3023}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CDDBF8A5-5FBC-8F00-763A-D20BE56E3023}.Release|Win32.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
