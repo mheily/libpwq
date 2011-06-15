@@ -31,7 +31,8 @@
 /* Specific workqueue items */
 #define WORKQUEUE_PLATFORM_SPECIFIC \
 	PTP_POOL win_thread_pool; \
-	TP_CALLBACK_ENVIRON win_callback_env
+	TP_CALLBACK_ENVIRON win_callback_env; \
+	LIST_ENTRY(_pthread_workqueue) wqlist_entry
 
 
 #endif  /* _PTWQ_WINDOWS_PLATFORM_H */
