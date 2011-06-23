@@ -382,7 +382,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>41</integer>
+					<integer>40</integer>
 				</dict>
 			</array>
 		</dict>
@@ -1757,9 +1757,9 @@
 		<string>PrimaryDocumentVisibleCharacterRange</string>
 		<string>HideAllIssues</string>
 		<string>PrimaryDocumentSelectedCharacterRange</string>
-		<real>330503921.99203002</real>
-		<string>{916, 1728}</string>
-		<string>{1951, 0}</string>
+		<real>330504063.17025203</real>
+		<string>{3096, 1385}</string>
+		<string>{3057, 0}</string>
 		<string>witem_cache_cleanup()</string>
 		<string>Xcode.IDEKit.EditorDocument.SourceCode</string>
 		<dict>
@@ -2553,19 +2553,19 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>428</integer>
+					<integer>429</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>433</integer>
-				</dict>
-				<dict>
-					<key>CF$UID</key>
-					<integer>436</integer>
+					<integer>434</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
 					<integer>437</integer>
+				</dict>
+				<dict>
+					<key>CF$UID</key>
+					<integer>438</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -2623,11 +2623,11 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>400</integer>
+					<integer>401</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>424</integer>
+					<integer>425</integer>
 				</dict>
 			</array>
 		</dict>
@@ -3327,23 +3327,23 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>380</integer>
+					<integer>381</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>384</integer>
+					<integer>385</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>388</integer>
+					<integer>389</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>392</integer>
+					<integer>393</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>396</integer>
+					<integer>397</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4016,9 +4016,9 @@
 				</dict>
 			</array>
 		</dict>
-		<real>330503921.98837298</real>
-		<string>{916, 1728}</string>
-		<string>{1951, 0}</string>
+		<real>330504063.16895902</real>
+		<string>{3096, 1385}</string>
+		<string>{3057, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4346,12 +4346,13 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>216</integer>
+					<integer>380</integer>
 				</dict>
 			</array>
 		</dict>
-		<real>330503521.45818001</real>
-		<string>{1917, 2593}</string>
+		<real>330504047.41121602</real>
+		<string>{1674, 2463}</string>
+		<string>{3174, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4381,11 +4382,11 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>381</integer>
+					<integer>382</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>382</integer>
+					<integer>383</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4393,7 +4394,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>383</integer>
+					<integer>384</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4429,11 +4430,11 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>385</integer>
+					<integer>386</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>386</integer>
+					<integer>387</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4441,7 +4442,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>387</integer>
+					<integer>388</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4477,11 +4478,11 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>389</integer>
+					<integer>390</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>390</integer>
+					<integer>391</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4489,7 +4490,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>391</integer>
+					<integer>392</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4525,11 +4526,11 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>393</integer>
+					<integer>394</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>394</integer>
+					<integer>395</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4537,7 +4538,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>395</integer>
+					<integer>396</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4573,11 +4574,11 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>397</integer>
+					<integer>398</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>398</integer>
+					<integer>399</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4585,7 +4586,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>399</integer>
+					<integer>400</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4602,30 +4603,30 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>401</integer>
+					<integer>402</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>403</integer>
+					<integer>404</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>405</integer>
+					<integer>406</integer>
 				</dict>
 			</array>
 			<key>NS.objects</key>
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>407</integer>
+					<integer>408</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>414</integer>
+					<integer>415</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>419</integer>
+					<integer>420</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4643,7 +4644,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>402</integer>
+				<integer>403</integer>
 			</dict>
 		</dict>
 		<dict>
@@ -4669,7 +4670,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>404</integer>
+				<integer>405</integer>
 			</dict>
 		</dict>
 		<dict>
@@ -4695,7 +4696,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>406</integer>
+				<integer>407</integer>
 			</dict>
 		</dict>
 		<dict>
@@ -4717,14 +4718,14 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>408</integer>
+					<integer>409</integer>
 				</dict>
 			</array>
 			<key>NS.objects</key>
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>409</integer>
+					<integer>410</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4739,7 +4740,7 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>410</integer>
+					<integer>411</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4747,7 +4748,7 @@
 			<key>$class</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>413</integer>
+				<integer>414</integer>
 			</dict>
 			<key>IDEQuickLookPageNumber</key>
 			<dict>
@@ -4757,12 +4758,12 @@
 			<key>documentURL</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>411</integer>
+				<integer>412</integer>
 			</dict>
 			<key>timestamp</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>412</integer>
+				<integer>413</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-03-10_08-26-14/libpthread_workqueue/trunk/src/api.o</string>
@@ -4787,14 +4788,14 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>408</integer>
+					<integer>409</integer>
 				</dict>
 			</array>
 			<key>NS.objects</key>
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>415</integer>
+					<integer>416</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4808,7 +4809,7 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>416</integer>
+					<integer>417</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4816,7 +4817,7 @@
 			<key>$class</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>413</integer>
+				<integer>414</integer>
 			</dict>
 			<key>IDEQuickLookPageNumber</key>
 			<dict>
@@ -4826,12 +4827,12 @@
 			<key>documentURL</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>417</integer>
+				<integer>418</integer>
 			</dict>
 			<key>timestamp</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>418</integer>
+				<integer>419</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-03-10_08-26-14/libpthread_workqueue/trunk/src/posix/manager.o</string>
@@ -4846,14 +4847,14 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>408</integer>
+					<integer>409</integer>
 				</dict>
 			</array>
 			<key>NS.objects</key>
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>420</integer>
+					<integer>421</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4867,7 +4868,7 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>421</integer>
+					<integer>422</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4875,7 +4876,7 @@
 			<key>$class</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>413</integer>
+				<integer>414</integer>
 			</dict>
 			<key>IDEQuickLookPageNumber</key>
 			<dict>
@@ -4885,12 +4886,12 @@
 			<key>documentURL</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>422</integer>
+				<integer>423</integer>
 			</dict>
 			<key>timestamp</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>423</integer>
+				<integer>424</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-03-10_08-26-14/libpthread_workqueue/trunk/testing/latency/latency</string>
@@ -4912,7 +4913,7 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>425</integer>
+					<integer>426</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4945,11 +4946,11 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>426</integer>
+					<integer>427</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>427</integer>
+					<integer>428</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4973,22 +4974,22 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>429</integer>
+					<integer>430</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>430</integer>
+					<integer>431</integer>
 				</dict>
 			</array>
 			<key>NS.objects</key>
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>431</integer>
+					<integer>432</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>432</integer>
+					<integer>433</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5006,14 +5007,14 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>434</integer>
+					<integer>435</integer>
 				</dict>
 			</array>
 			<key>NS.objects</key>
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>435</integer>
+					<integer>436</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5043,43 +5044,43 @@
 			<array>
 				<dict>
 					<key>CF$UID</key>
-					<integer>438</integer>
+					<integer>439</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>440</integer>
+					<integer>441</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>442</integer>
+					<integer>443</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>444</integer>
+					<integer>445</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>446</integer>
+					<integer>447</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>448</integer>
+					<integer>449</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>450</integer>
+					<integer>451</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>452</integer>
+					<integer>453</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>454</integer>
+					<integer>455</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>456</integer>
+					<integer>457</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5097,7 +5098,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>439</integer>
+				<integer>440</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/witem_cache.c</string>
@@ -5115,43 +5116,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>441</integer>
-			</dict>
-		</dict>
-		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/api.c</string>
-		<dict>
-			<key>$class</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>177</integer>
-			</dict>
-			<key>NS.base</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>0</integer>
-			</dict>
-			<key>NS.relative</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>443</integer>
-			</dict>
-		</dict>
-		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/debug.h</string>
-		<dict>
-			<key>$class</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>177</integer>
-			</dict>
-			<key>NS.base</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>0</integer>
-			</dict>
-			<key>NS.relative</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>445</integer>
+				<integer>442</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/private.h</string>
@@ -5169,7 +5134,43 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>447</integer>
+				<integer>444</integer>
+			</dict>
+		</dict>
+		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/api.c</string>
+		<dict>
+			<key>$class</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>177</integer>
+			</dict>
+			<key>NS.base</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>0</integer>
+			</dict>
+			<key>NS.relative</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>446</integer>
+			</dict>
+		</dict>
+		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/debug.h</string>
+		<dict>
+			<key>$class</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>177</integer>
+			</dict>
+			<key>NS.base</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>0</integer>
+			</dict>
+			<key>NS.relative</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>448</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-06-23_08-21-28/libpthread_workqueue/trunk/src/posix/manager.c</string>
@@ -5187,7 +5188,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>449</integer>
+				<integer>450</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-04-11_11-22-57/libpthread_workqueue/trunk/src/posix/manager.c</string>
@@ -5205,7 +5206,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>451</integer>
+				<integer>452</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-04-11_11-22-57/libpthread_workqueue/trunk/src/posix/thread_rt.c</string>
@@ -5223,7 +5224,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>453</integer>
+				<integer>454</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-04-11_11-22-57/libpthread_workqueue/trunk/src/api.c</string>
@@ -5241,7 +5242,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>455</integer>
+				<integer>456</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-04-11_11-22-57/libpthread_workqueue/trunk/src/private.h</string>
@@ -5259,7 +5260,7 @@
 			<key>NS.relative</key>
 			<dict>
 				<key>CF$UID</key>
-				<integer>457</integer>
+				<integer>458</integer>
 			</dict>
 		</dict>
 		<string>file://localhost/home/jocke/gcd/cb/2011-04-11_11-22-57/libpthread_workqueue/trunk/include/pthread_workqueue.h</string>
