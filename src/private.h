@@ -82,7 +82,7 @@ extern int USE_RT_THREADS;
  *    producer/consumer threads as allocated memory is cached by the thread freeing it
  */
 
-#define WITEM_CACHE_TYPE 2 // Set to 1, 2 or 3 to specify witem cache implementation to use
+#define WITEM_CACHE_TYPE 1 // Set to 1, 2 or 3 to specify witem cache implementation to use
 
 struct work {
     STAILQ_ENTRY(work)   item_entry; 
