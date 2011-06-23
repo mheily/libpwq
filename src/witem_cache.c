@@ -66,6 +66,8 @@ witem_free(struct work *wi)
 void
 witem_cache_cleanup(void *value)
 {
+    void * p;
+    p = value;
 }
 
 /* libumem based object cache */
