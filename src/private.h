@@ -62,6 +62,9 @@
 
 extern int USE_RT_THREADS;
 
+/* A limit of the number of cpu:s that we view as available, useful when e.g. using processor sets */
+extern unsigned int PWQ_ACTIVE_CPU;
+
 #if __GNUC__
 #define fastpath(x)     ((__typeof__(x))__builtin_expect((long)(x), ~0l))
 #define slowpath(x)     ((__typeof__(x))__builtin_expect((long)(x), 0l))

@@ -132,7 +132,7 @@ manager_init(void)
 
     witem_cache_init();
 
-    cpu_count = (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
+    cpu_count = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
 
     pthread_attr_init(&detached_attr);
     pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);

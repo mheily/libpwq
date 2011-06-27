@@ -29,6 +29,7 @@
 
 #include "private.h"
 
+unsigned int PWQ_ACTIVE_CPU = 0;
 int DEBUG_WORKQUEUE = 0;
 char *WORKQUEUE_DEBUG_IDENT = "WQ";
 
@@ -50,6 +51,7 @@ pthread_workqueue_init_np(void)
     DEBUG_WORKQUEUE = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
 # ifndef _WIN32
     USE_RT_THREADS = (getenv("PWQ_RT_THREADS") == NULL) ? 0 : 1;
+    PWQ_ACTIVE_CPU = (getenv("PWQ_ACTIVE_CPU") == NULL) ? 0 : atoi(getenv("PWQ_ACTIVE_CPU"));
 # endif
 #endif
 
