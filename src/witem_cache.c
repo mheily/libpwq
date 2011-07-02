@@ -60,14 +60,14 @@ witem_alloc(void (*func)(void *), void *func_arg)
 void 
 witem_free(struct work *wi)
 {
+    dbg_printf("freed work item %p", wi);
     free(wi);
 }
 
 void
 witem_cache_cleanup(void *value)
 {
-    void * p;
-    p = value;
+    (void) value;
 }
 
 /* libumem based object cache */

@@ -1,3 +1,9 @@
+Version 0.7.1 r157
+released 7/02/2011
+---
+
+ * Fix a memory leak in worker_overcommit_main() when reaping idle threads.
+
 Version 0.7 r150
 released 6/13/2011
 ---

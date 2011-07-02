@@ -80,6 +80,8 @@ static struct {
     pthread_cond_t  sb_wake_cond;
 } scoreboard;
 
+static const struct work worker_stop_working;
+
 static unsigned int 
 worker_idle_threshold_per_cpu()
 {
@@ -242,6 +244,10 @@ overcommit_worker_main(void *arg)
                 STAILQ_REMOVE_HEAD(&workq->item_listhead, item_entry);
                 if (STAILQ_EMPTY(&workq->item_listhead))
                     ocwq_mask &= ~(0x1 << workq->wqlist_index);
+                if (slowpath(witem == &worker_stop_working)) {
+                    dbg_puts("overcommit_worker exiting..");
+                    pthread_exit(0);
+                }
                 /* Execute the work item */
                 pthread_mutex_unlock(&ocwq_mtx);
                 func = witem->func;
@@ -307,10 +313,9 @@ worker_main(void *arg)
 
         atomic_dec(&scoreboard.idle);
 
-        if (slowpath(witem->func == NULL)) {
+        if (slowpath(witem == &worker_stop_working)) {
             dbg_puts("worker exiting..");
             self->state = WORKER_STATE_ZOMBIE;
-            witem_free(witem);
             scoreboard.count--;
             pthread_exit(0);
         }
@@ -373,14 +378,10 @@ worker_start(void)
 }
 
 static int
-//int
 worker_stop(void) 
 {
-    struct work *witem;
     pthread_workqueue_t workq;
     int i;
-
-    witem = witem_alloc(NULL, NULL);
 
     pthread_mutex_lock(&wqlist_mtx);
     for (i = 0; i < PTHREAD_WORKQUEUE_MAX; i++) {
@@ -388,7 +389,8 @@ worker_stop(void)
         if (workq == NULL)
             continue;
 
-        STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
+        STAILQ_INSERT_TAIL(&workq->item_listhead, 
+                (struct work *) &worker_stop_working, item_entry);
         pthread_cond_signal(&wqlist_has_work);
         pthread_mutex_unlock(&wqlist_mtx);
 
