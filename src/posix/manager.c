@@ -77,7 +77,7 @@ static int               wqlist_has_manager;
 static pthread_attr_t    detached_attr;
 
 static struct {
-    unsigned int    load,
+    volatile unsigned int load,
                     count,
                     idle;
     unsigned int    sb_wake_pending;
@@ -378,6 +378,7 @@ worker_main(void *arg)
 
         if (slowpath(witem->func == NULL)) {
             dbg_puts("worker exiting..");
+            atomic_dec(&scoreboard.count);
             witem_free(witem);
             pthread_mutex_lock(&workers_mtx);
             LIST_REMOVE(self, entries);
@@ -428,13 +429,13 @@ worker_start(void)
         return (-1);
     }
 
-    scoreboard.count++;
     atomic_inc(&scoreboard.idle);
+    atomic_inc(&scoreboard.count);
 
     if (pthread_create(&wkr->tid, &detached_attr, worker_main, wkr) != 0) {
         dbg_perror("pthread_create(3)");
         atomic_dec(&scoreboard.idle);
-        scoreboard.count--;
+        atomic_dec(&scoreboard.count);
         return (-1);
     }
 
@@ -452,6 +453,7 @@ worker_stop(void)
     struct work *witem;
     pthread_workqueue_t workq;
     int i;
+    unsigned int wqlist_index_bit, new_mask;
 
     witem = witem_alloc(NULL, NULL);
 
@@ -461,11 +463,22 @@ worker_stop(void)
         if (workq == NULL)
             continue;
 
+        wqlist_index_bit = (0x1 << workq->wqlist_index);
+
+        pthread_spin_lock(&workq->mtx);
+        
+        do
+        {
+            new_mask = atomic_or(&wqlist_mask, wqlist_index_bit);
+        } while (!(new_mask & wqlist_index_bit));
+
         STAILQ_INSERT_TAIL(&workq->item_listhead, witem, item_entry);
+
+        pthread_spin_unlock(&workq->mtx);
+        
         pthread_cond_signal(&wqlist_has_work);
         pthread_mutex_unlock(&wqlist_mtx);
 
-        scoreboard.count--;
         return (0);
     }
 
