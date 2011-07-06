@@ -26,6 +26,7 @@
 #define GENERATOR_WORKQUEUE_COUNT 1
 #define SLEEP_BEFORE_START 0
 #define FORCE_BUSY_LOOP 0
+#define LATENCY_RUN_GENERATOR_IN_MAIN_THREAD 0
 
 // Data rates
 #define EVENTS_GENERATED_PER_TICK 100   // simulate some small bursting 

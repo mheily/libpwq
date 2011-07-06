@@ -152,7 +152,7 @@ static void _event_tick(void* context)
 
 static void _generate_simulated_events()
 {
-	unsigned long i, tick, overhead;
+	unsigned long i = 0, tick, overhead;
     mytime_t start, current, overhead_start = 0, overhead_end = 0;
 
     start = current = gettime();
@@ -185,10 +185,14 @@ static void _generate_simulated_events()
         overhead_start = gettime();
         
         events_processed = GENERATOR_WORKQUEUE_COUNT * EVENTS_GENERATED_PER_TICK; // number of items that will be processed
-        
+  
+#if (LATENCY_RUN_GENERATOR_IN_MAIN_THREAD == 1)
         for (i = 0; i < GENERATOR_WORKQUEUE_COUNT; i++)
             (void) pthread_workqueue_additem_np(workqueue_generator[i].wq, _event_tick, (void *) i, NULL, NULL);
-        
+#else
+        _event_tick((void *)i);
+#endif
+
         // wait for all events to be processed
         pthread_mutex_lock(&generator_mutex);
         while (events_processed > 0)
