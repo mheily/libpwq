@@ -2,8 +2,10 @@ CC=gcc
 
 include ../../config.mk
 
+all: latency
+
 latency:
-	$(CC) $(CFLAGS) -I../../include -L../.. -o latency latency.c -lpthread_workqueue -lpthread -lrt
+	$(CC) $(CFLAGS) -I../../include -L../.. -Wl,-rpath,../.. -o latency latency.c -lpthread_workqueue -lpthread -lrt
 
 macosx:
 	$(CC) $(CFLAGS) -I../../include -L../.. -R../.. -o latencym latency.c -lpthread
