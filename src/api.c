@@ -113,14 +113,14 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 
     witem = witem_alloc(workitem_func, workitem_arg);
 
-    manager_workqueue_additem(workq, witem);
-
     if (itemhandlep != NULL)
         *itemhandlep = (pthread_workitem_handle_t *) witem;
     if (gencountp != NULL)
         *gencountp = witem->gencount;
 
-    dbg_printf("added an item to queue %p", workq);
+    manager_workqueue_additem(workq, witem);
+
+    dbg_printf("added item %p to queue %p", witem, workq);
 
     return (0);
 }
