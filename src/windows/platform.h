@@ -28,11 +28,15 @@
 #define strdup(p)	_strdup(p)
 #define random()	rand()
 
-/* Specific workqueue items */
-#define WORKQUEUE_PLATFORM_SPECIFIC \
-	PTP_POOL win_thread_pool; \
-	TP_CALLBACK_ENVIRON win_callback_env; \
+#ifdef PROVIDE_LEGACY_XP_SUPPORT
+# define WORKQUEUE_PLATFORM_SPECIFIC \
 	LIST_ENTRY(_pthread_workqueue) wqlist_entry
+#else
+/* Specific workqueue items */
+# define WORKQUEUE_PLATFORM_SPECIFIC \
+	PTP_POOL win_thread_pool; \
+	TP_CALLBACK_ENVIRON win_callback_env
+#endif
 
 
 #endif  /* _PTWQ_WINDOWS_PLATFORM_H */

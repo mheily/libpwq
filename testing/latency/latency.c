@@ -20,13 +20,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <ctype.h>
-#include <sys/time.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+
+#ifndef _WIN32
+# include <unistd.h>
+# include <pthread.h>
+# include <sys/time.h>
+#endif
+
 #include "latency.h"
 
 pthread_workqueue_t workqueues[WORKQUEUE_COUNT]; 
@@ -61,19 +65,54 @@ unsigned long gettime(void)
 
 #else
 
-static unsigned long gettime(void)
+static mytime_t gettime(void)
 {
-    struct timespec ts;
 #ifdef __linux__
+	struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
-#else
-    if (clock_gettime(CLOCK_HIGHRES, &ts) != 0)
-#endif
-        fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
+		        fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
     return ((ts.tv_sec * NANOSECONDS_PER_SECOND) + ts.tv_nsec);
+#elif defined(_WIN32)
+	LARGE_INTEGER now;
+	LARGE_INTEGER freq;
+	if (!QueryPerformanceCounter(&now) )
+		fprintf(stderr, "Failed to get performance counter!\n");
+	if (!QueryPerformanceFrequency(&freq) )
+		fprintf(stderr, "Failed to get performance frequency!\n");
+
+	return (mytime_t)(now.QuadPart * NANOSECONDS_PER_SECOND / freq.QuadPart);
+#else
+    struct timespec ts;
+    if (clock_gettime(CLOCK_HIGHRES, &ts) != 0)
+		        fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
+    return ((ts.tv_sec * NANOSECONDS_PER_SECOND) + ts.tv_nsec);
+#endif
 }
 
 #endif
+
+#ifdef _WIN32
+
+static void my_sleep(unsigned long nanoseconds) {
+	LARGE_INTEGER start, end;
+	LARGE_INTEGER freq;
+	
+	QueryPerformanceCounter(&start);
+	QueryPerformanceFrequency(&freq);
+
+	// sleep with ms resolution ...
+	Sleep(nanoseconds / 1000000);
+
+	// ... and busy-wait afterwards, until the requested delay was reached
+	QueryPerformanceCounter(&end);
+	while( (end.QuadPart - start.QuadPart) * NANOSECONDS_PER_SECOND / freq.QuadPart < nanoseconds ){
+		YieldProcessor();
+		QueryPerformanceCounter(&end);
+	}
+
+}
+
+#else
 
 // real resolution on solaris is at best system clock tick, i.e. 100Hz unless having the
 // high res system clock (1000Hz in that case)
@@ -98,6 +137,8 @@ static void my_sleep(unsigned long nanoseconds)
     
     return;
 }
+
+#endif
 
 static void _process_data(void* context)
 {
@@ -152,7 +193,8 @@ static void _event_tick(void* context)
 
 static void _generate_simulated_events()
 {
-	unsigned long i = 0, tick, overhead;
+	unsigned long i = 0, tick;
+	mytime_t overhead;
     mytime_t start, current, overhead_start = 0, overhead_end = 0;
 
     start = current = gettime();
@@ -281,6 +323,10 @@ int main(void)
     
 #ifdef __APPLE__
     (void) mach_timebase_info(&sTimebaseInfo);
+#endif
+	
+#ifdef MAKE_STATIC
+	pthread_workqueue_init_np();
 #endif
     
 	memset(&workqueues, 0, sizeof(workqueues));
