@@ -56,6 +56,7 @@ static void manager_start(void);
 static unsigned int      cpu_count;
 
 static LIST_HEAD(, worker) workers;
+static pthread_mutex_t   workers_mtx;
 static unsigned int      worker_min;
 static unsigned int      worker_idle_threshold; // we don't go down below this if we had to increase # workers
 
@@ -126,6 +127,8 @@ manager_init(void)
     pthread_cond_init(&wqlist_has_work, NULL);
 
     LIST_INIT(&workers);
+    pthread_mutex_init(&workers_mtx, NULL);
+
     pthread_mutex_init(&wqlist_mtx, NULL);
     wqlist_mask = 0;
 
@@ -375,9 +378,11 @@ worker_main(void *arg)
 
         if (slowpath(witem->func == NULL)) {
             dbg_puts("worker exiting..");
-            self->state = WORKER_STATE_ZOMBIE;
             witem_free(witem);
-            scoreboard.count--;
+            pthread_mutex_lock(&workers_mtx);
+            LIST_REMOVE(self, entries);
+            pthread_mutex_unlock(&workers_mtx);
+            free(self);
             pthread_exit(0);
         }
 
@@ -433,7 +438,9 @@ worker_start(void)
         return (-1);
     }
 
+    pthread_mutex_lock(&workers_mtx);
     LIST_INSERT_HEAD(&workers, wkr, entries);
+    pthread_mutex_unlock(&workers_mtx);
 
     return (0);
 }
@@ -458,6 +465,7 @@ worker_stop(void)
         pthread_cond_signal(&wqlist_has_work);
         pthread_mutex_unlock(&wqlist_mtx);
 
+        scoreboard.count--;
         return (0);
     }
 
