@@ -186,7 +186,7 @@ static void _generate_simulated_events()
         
         events_processed = GENERATOR_WORKQUEUE_COUNT * EVENTS_GENERATED_PER_TICK; // number of items that will be processed
   
-#if (LATENCY_RUN_GENERATOR_IN_MAIN_THREAD == 1)
+#if (LATENCY_RUN_GENERATOR_IN_MAIN_THREAD == 0)
         for (i = 0; i < GENERATOR_WORKQUEUE_COUNT; i++)
             (void) pthread_workqueue_additem_np(workqueue_generator[i].wq, _event_tick, (void *) i, NULL, NULL);
 #else
