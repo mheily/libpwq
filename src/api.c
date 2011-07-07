@@ -193,3 +193,9 @@ pthread_workqueue_attr_setqueuepriority_np(
     } else
         return (EINVAL);
 }
+
+unsigned long VISIBLE
+pthread_workqueue_peek_np(const char *key)
+{
+    return manager_peek(key);
+}

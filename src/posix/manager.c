@@ -302,6 +302,7 @@ overcommit_worker_main(void *arg)
         }
     }
 
+    dbg_printf("worker exiting (idle=%d)", ocwq_idle_threads);
     pthread_exit(NULL);
 }
 
@@ -730,4 +731,28 @@ get_load_average(void)
         loadavg = 1;
 
     return ((int) loadavg);
+}
+
+unsigned long 
+manager_peek(const char *key)
+{
+    uint64_t rv;
+
+    if (strcmp(key, "combined_idle") == 0) {
+        rv = scoreboard.idle;
+        if (scoreboard.idle > worker_min)
+            rv -= worker_min;
+        rv += ocwq_idle_threads;
+    } else if (strcmp(key, "idle") == 0) {
+        rv = scoreboard.idle;
+        if (scoreboard.idle > worker_min)
+            rv -= worker_min;
+    } else if (strcmp(key, "ocomm_idle") == 0) {
+        rv = ocwq_idle_threads;
+    } else {
+        dbg_printf("invalid key: %s", key);
+        abort();
+    }
+
+    return rv;
 }

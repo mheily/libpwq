@@ -6,6 +6,7 @@
 
 #include <sys/resource.h>
 #include <sys/queue.h>
+#include <stdint.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>

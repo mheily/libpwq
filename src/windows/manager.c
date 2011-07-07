@@ -180,3 +180,19 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 // TODO: We need to cleanly close the environment and threadpools!
 
 #endif
+
+unsigned long
+manager_peek(const char *key)
+{
+    uint64_t rv;
+
+    if (strcmp(key, "combined_idle") == 0) {
+        dbg_puts("TODO");
+        abort();
+    } else {
+        dbg_printf("invalid key: ", key);
+        abort();
+    }
+
+    return rv;
+}
