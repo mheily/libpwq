@@ -86,7 +86,7 @@ static struct {
 } scoreboard;
 
 static unsigned int 
-worker_idle_threshold_per_cpu()
+worker_idle_threshold_per_cpu(void)
 {
     switch (cpu_count)
     {
@@ -113,7 +113,7 @@ worker_idle_threshold_per_cpu()
     return 2;
 }
 
-void
+static void
 manager_reinit(void)
 {
     if (manager_init() < 0)
@@ -231,7 +231,7 @@ wqlist_scan(int *queue_priority)
     }
 }
 
-static void _wakeup_manager()
+static void _wakeup_manager(void)
 {
     dbg_puts("asking manager to wake up");
 
