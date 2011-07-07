@@ -284,12 +284,14 @@ overcommit_worker_main(void *arg)
         ocwq_idle_threads++;
         dbg_printf("waiting for work (idle=%d)", ocwq_idle_threads);
         rv = pthread_cond_timedwait(&ocwq_has_work, &ocwq_mtx, &ts);
-        if (rv < 0) {
+        if (rv != 0) {
             /* Normally, the signaler will decrement the idle counter,
                but this path is not taken in response to a signaler.
              */
             ocwq_idle_threads--;
-            if (errno == ETIMEDOUT) {
+	    pthread_mutex_unlock(&ocwq_mtx);
+
+            if (rv == ETIMEDOUT) {
                 dbg_puts("timeout, no work available");
                 break;
             } else {
