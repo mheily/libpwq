@@ -54,9 +54,6 @@ static unsigned int get_process_limit(void);
 static void manager_start(void);
 
 static unsigned int      cpu_count;
-
-static LIST_HEAD(, worker) workers;
-static pthread_mutex_t   workers_mtx;
 static unsigned int      worker_min;
 static unsigned int      worker_idle_threshold; // we don't go down below this if we had to increase # workers
 
@@ -125,9 +122,6 @@ manager_init(void)
 {
     wqlist_has_manager = 0;
     pthread_cond_init(&wqlist_has_work, NULL);
-
-    LIST_INIT(&workers);
-    pthread_mutex_init(&workers_mtx, NULL);
 
     pthread_mutex_init(&wqlist_mtx, NULL);
     wqlist_mask = 0;
@@ -309,21 +303,19 @@ overcommit_worker_main(void *arg)
 static void *
 worker_main(void *arg)
 {
-    struct worker *self = (struct worker *) arg;
     struct work *witem;
     void (*func)(void *);
     void *func_arg;
     int queue_priority = 0;
     struct timespec ts_start, ts_now;
     
+    (void) arg;
     dbg_puts("worker thread started");
 
     if (PWQ_RT_THREADS)
         ptwq_set_current_thread_priority(WORKQ_HIGH_PRIOQUEUE); // start at highest priority possible
         
     for (;;) {
-
-        self->state = WORKER_STATE_SLEEPING;
 
         witem = wqlist_scan(&queue_priority);
 
@@ -368,6 +360,12 @@ worker_main(void *arg)
             {
                 pthread_mutex_lock(&wqlist_mtx);
 
+                /*
+                  TODO: Consider using pthread_cond_timedwait() so that
+                  workers can self-terminate if they are idle too long.
+                  This would also be a failsafe in case there are bugs
+                  with the scoreboard that cause us to "leak" workers.
+                 */
                 while ((witem = wqlist_scan(&queue_priority)) == NULL)
                     pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
 
@@ -375,18 +373,12 @@ worker_main(void *arg)
             }
         }
 
-        self->state = WORKER_STATE_RUNNING;
-
         atomic_dec(&scoreboard.idle);
 
         if (slowpath(witem->func == NULL)) {
             dbg_puts("worker exiting..");
             atomic_dec(&scoreboard.count);
             witem_free(witem);
-            pthread_mutex_lock(&workers_mtx);
-            LIST_REMOVE(self, entries);
-            pthread_mutex_unlock(&workers_mtx);
-            free(self);
             pthread_exit(0);
         }
 
@@ -422,35 +414,24 @@ worker_main(void *arg)
 static int
 worker_start(void) 
 {
-    struct worker *wkr;
+    pthread_t tid;
 
     dbg_puts("Spawning another worker");
-
-    wkr = calloc(1, sizeof(*wkr));
-    if (wkr == NULL) {
-        dbg_perror("calloc(3)");
-        return (-1);
-    }
 
     atomic_inc(&scoreboard.idle);
     atomic_inc(&scoreboard.count);
 
-    if (pthread_create(&wkr->tid, &detached_attr, worker_main, wkr) != 0) {
+    if (pthread_create(&tid, &detached_attr, worker_main, NULL) != 0) {
         dbg_perror("pthread_create(3)");
         atomic_dec(&scoreboard.idle);
         atomic_dec(&scoreboard.count);
         return (-1);
     }
 
-    pthread_mutex_lock(&workers_mtx);
-    LIST_INSERT_HEAD(&workers, wkr, entries);
-    pthread_mutex_unlock(&workers_mtx);
-
     return (0);
 }
 
 static int
-//int
 worker_stop(void) 
 {
     struct work *witem;
@@ -495,7 +476,6 @@ worker_stop(void)
 static void *
 manager_main(void *unused __attribute__ ((unused)))
 {
-    //struct worker *wkr;
     unsigned int load_max = cpu_count;
     unsigned int worker_max, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;

@@ -100,16 +100,6 @@ struct work {
 #endif
 };
 
-struct worker {
-    LIST_ENTRY(worker)   entries;
-    pthread_t            tid;
-    enum {
-        WORKER_STATE_SLEEPING,
-        WORKER_STATE_RUNNING,
-        WORKER_STATE_ZOMBIE,
-    } state;
-};
-
 struct _pthread_workqueue {
     unsigned int         sig;    /* Unique signature for this structure */
     unsigned int         flags;
