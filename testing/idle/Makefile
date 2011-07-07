@@ -19,7 +19,7 @@ include ../../config.mk
 all: idle
 
 idle: main.c
-	$(CC) $(CFLAGS) -g -O0 -o $@ -I../.. -I../../include -L../.. -Wl,-rpath,../.. main.c -lpthread_workqueue -lpthread
+	$(CC) $(CFLAGS) -g -O0 -o $@ -I../.. -I../../include -L../.. -Wl,-rpath,$(BASEDIR) main.c -lpthread_workqueue -lpthread
 
 check: idle
 	LD_LIBRARY_PATH=../..:/usr/sfw/lib/amd64 PWQ_DEBUG=yes ./idle
