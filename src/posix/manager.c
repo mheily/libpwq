@@ -689,7 +689,7 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 
         // Only signal thread wakeup if there are idle threads available
         // and no other thread have managed to race us and empty the wqlist on our behalf already
-        if ((scoreboard.idle > 0) && ((wqlist_mask & wqlist_index_bit) != 0))
+        if ((scoreboard.idle > 0)) // && ((wqlist_mask & wqlist_index_bit) != 0)) // disabling this fringe optimization for now
         {
             pthread_mutex_lock(&wqlist_mtx);
             pthread_cond_signal(&wqlist_has_work);
