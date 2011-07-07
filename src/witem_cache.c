@@ -81,7 +81,7 @@ static umem_cache_t  *witem_cache;
 int
 witem_cache_init(void)
 {
-    witem_cache = umem_cache_create("witem_cache",   
+    witem_cache = umem_cache_create((char *) "witem_cache",   
                                     sizeof(struct work),   
                                     CACHELINE_SIZE,  
                                     NULL,
