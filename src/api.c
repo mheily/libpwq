@@ -94,7 +94,7 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
 
     manager_workqueue_create(workq);
 
-    dbg_printf("created queue %p", workq);
+    dbg_printf("created queue %p", (void *) workq);
 
     *workqp = workq;
     return (0);
@@ -120,7 +120,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 
     manager_workqueue_additem(workq, witem);
 
-    dbg_printf("added item %p to queue %p", witem, workq);
+    dbg_printf("added item %p to queue %p", (void *) witem, (void *) workq);
 
     return (0);
 }
