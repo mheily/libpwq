@@ -32,21 +32,21 @@
 #ifdef PROVIDE_LEGACY_XP_SUPPORT
 
 static LIST_HEAD(, _pthread_workqueue) wqlist[WORKQ_NUM_PRIOQUEUE];
-static pthread_spinlock_t   wqlist_mtx;
+static pthread_rwlock_t wqlist_mtx;
 
 int
 manager_init(void)
 {
-	pthread_spin_init(&wqlist_mtx, PTHREAD_PROCESS_PRIVATE);
+	pthread_rwlock_init(&wqlist_mtx, NULL);
     return (0);
 }
 
 void
 manager_workqueue_create(struct _pthread_workqueue *workq)
 {
-    pthread_spin_lock(&wqlist_mtx);
+    pthread_rwlock_wrlock(&wqlist_mtx);
     LIST_INSERT_HEAD(&wqlist[workq->queueprio], workq, wqlist_entry);
-	pthread_spin_unlock(&wqlist_mtx);
+	pthread_rwlock_unlock(&wqlist_mtx);
 
 	pthread_spin_init(&workq->mtx, PTHREAD_PROCESS_PRIVATE);
 }
@@ -59,7 +59,7 @@ wqlist_scan(void)
     struct work *witem = NULL;
     int i;
 
-    pthread_spin_lock(&wqlist_mtx);
+    pthread_rwlock_rdlock(&wqlist_mtx);
     for (i = 0; i < WORKQ_NUM_PRIOQUEUE; i++) {
         LIST_FOREACH(workq, &wqlist[i], wqlist_entry) {
 			pthread_spin_lock(&workq->mtx);
@@ -79,7 +79,7 @@ wqlist_scan(void)
     }
 
 out:
-    pthread_spin_unlock(&wqlist_mtx);
+    pthread_rwlock_unlock(&wqlist_mtx);
     return (witem);
 }
 
@@ -184,7 +184,7 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 unsigned long
 manager_peek(const char *key)
 {
-    uint64_t rv;
+    unsigned long rv;
 
     if (strcmp(key, "combined_idle") == 0) {
         dbg_puts("TODO");
