@@ -41,21 +41,10 @@ void f(void *arg)
     printf("worker %ld finished\n", x);
 }
 
-/*
- * Enqueue a large number of short-lived workitems, to allow observation
- * of how idle threads are terminated.
- */
-int main() 
+void run_idle_test(pthread_workqueue_t wq)
 {
-    pthread_workqueue_t wq;
-    pthread_workqueue_attr_t attr;
     long i;
     int rv;
-
-    pthread_workqueue_attr_init_np(&attr);
-    pthread_workqueue_attr_setovercommit_np(&attr, 0);
-    rv = pthread_workqueue_create_np(&wq, &attr);
-    if (rv != 0) abort();
 
     for (i = 0; i < 100; i++) {
         rv = pthread_workqueue_additem_np(wq, f, (void *) i, NULL, NULL);
@@ -80,7 +69,40 @@ int main()
             exit(1);
         }
     }
+}
 
-    printf("\n---\nOK: all excess idle threads have been terminated.\n");
+/*
+ * Enqueue a large number of short-lived workitems, to allow observation
+ * of how idle threads are terminated.
+ */
+int main(int argc, char *argv[]) 
+{
+    pthread_workqueue_t wq;
+    pthread_workqueue_t ocwq;
+    pthread_workqueue_attr_t attr;
+    pthread_workqueue_attr_t ocattr;
+    int i, rounds;
+    int rv;
+
+    if (argc == 2) 
+        rounds = atoi(argv[1]);
+    else
+        rounds = 1;
+
+    pthread_workqueue_attr_init_np(&attr);
+    pthread_workqueue_attr_setovercommit_np(&attr, 0);
+    rv = pthread_workqueue_create_np(&wq, &attr);
+    if (rv != 0) abort();
+
+    pthread_workqueue_attr_init_np(&ocattr);
+    pthread_workqueue_attr_setovercommit_np(&ocattr, 1);
+    rv = pthread_workqueue_create_np(&ocwq, &ocattr);
+    if (rv != 0) abort();
+
+    for (i = 0; i < rounds; i++) {
+        run_idle_test(wq);
+        run_idle_test(ocwq);
+    }
+    printf("\n---\nOK: all excess idle threads have been terminated after %d rounds.\n", rounds);
     exit(0);
 }
