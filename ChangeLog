@@ -1,4 +1,4 @@
-Version 0.8.1 r193
+Version 0.8.2 r193
 released 7/16/2011
 ---
 
@@ -6,7 +6,11 @@ released 7/16/2011
  * Make the "idle" test optional as it does not work on 32-bit Linux
  * Use time_t for PWQ_SPIN_USEC to fix a build problem on 32-bit Linux
 
- * Fix some compilation issues on 32-bit Linux
+Version 0.8.1 r?
+released 7/16/2011
+---
+
+ * Uploaded to Debian, but not generally released.
 
 Version 0.8 r190
 released 7/08/2011
