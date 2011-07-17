@@ -38,7 +38,7 @@
 
 /* Environment setting */
 unsigned int PWQ_RT_THREADS = 0;
-unsigned int PWQ_SPIN_USEC = 10000; // The number of microseconds we should spin loop if desired
+time_t PWQ_SPIN_USEC = 10000; // The number of microseconds we should spin loop if desired
 unsigned int PWQ_SPIN_THREADS = 0; // The number of threads that should be kept spinning
 unsigned volatile int current_threads_spinning = 0; // The number of threads currently spinning
 

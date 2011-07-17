@@ -34,42 +34,44 @@
 #include <linux/syscalls.h>
 #include <linux/uaccess.h>
 
+#define PWQ_DEVICE_NAME "pthread_workqueue"
+
 /*
  * Prototypes
  */
-static int tpool_open (struct inode *inode, struct file *file);
-static int tpool_release (struct inode *inode, struct file *file);
+static int pwq_open (struct inode *inode, struct file *file);
+static int pwq_release (struct inode *inode, struct file *file);
 
 /*
  * Global variables
  */
-static struct task_struct *tpool_manager_thread;
-static int tpool_major;
-static struct class *tpool_class;
+static struct task_struct *pwq_collector_thread;
+static int pwq_major;
+static struct class *pwq_class;
 struct file_operations fops = {
     .owner  =   THIS_MODULE,
-    .open	=   tpool_open,
-    .release =  tpool_release,
-    //TODO: .poll = tpool_poll,
+    .open	=   pwq_open,
+    .release =  pwq_release,
+    //TODO: .poll = pwq_poll,
 };
 
 //only for sleeping during testing
 #include <linux/delay.h>
-static int tpool_main(void *arg)
+static int pwq_collector_main(void *arg)
 {
-    printk(KERN_INFO "threadpool thread started...\n");
+    printk(KERN_INFO "pwq collector thread started...\n");
     while (!kthread_should_stop()) {
         msleep(5000);
-        printk(KERN_INFO "threadpool thread awake...\n");
+        printk(KERN_INFO "pwq collector thread awake...\n");
     }
-    printk(KERN_INFO "threadpool stopping...\n");
+    printk(KERN_INFO "pwq collector thread stopping...\n");
 
     return 0;
 }
 
-static int tpool_open (struct inode *inode, struct file *file) 
+static int pwq_open (struct inode *inode, struct file *file) 
 {
-    printk("tpool_open\n");
+    printk("pwq_open: pid %d opened the device node\n", current->pid);
 
 #if 0
     kq = kmalloc(sizeof(*kq), GFP_KERNEL);
@@ -86,42 +88,42 @@ static int tpool_open (struct inode *inode, struct file *file)
     return 0;
 }
 
-static int tpool_release (struct inode *inode, struct file *file) 
+static int pwq_release (struct inode *inode, struct file *file) 
 {
-    printk("tpool_release\n");
-#if DEADWOOD
+    printk("pwq_release: pid %d closed the device node\n", current->pid);
+#ifdef DEADWOOD
     kfree(file->private_data);
 #endif
 
     return 0;
 }
 
-static int __init tpool_start(void)
+static int __init pwq_start(void)
 {
     int rv = 0;
 
-    printk(KERN_INFO "Loading threadpool module...\n");
+    printk(KERN_INFO "Loading pthread_workqueue module...\n");
 
     /* Register as a character device */
-    tpool_major = register_chrdev(0, "threadpool", &fops);
-    if (tpool_major < 0) {
+    pwq_major = register_chrdev(0, "pwq", &fops);
+    if (pwq_major < 0) {
         printk(KERN_WARNING "register_chrdev() failed");
-        return tpool_major;
+        return pwq_major;
     }
 
-    /* Create /dev/threadpool */
-    tpool_class = class_create(THIS_MODULE, "threadpool");
-    device_create(tpool_class, NULL, MKDEV(tpool_major,0), NULL, "threadpool");
+    /* Create a device node */
+    pwq_class = class_create(THIS_MODULE, PWQ_DEVICE_NAME);
+    device_create(pwq_class, NULL, MKDEV(pwq_major,0), NULL, PWQ_DEVICE_NAME);
 
     printk(KERN_INFO "Creating helper thread...\n");
-    tpool_manager_thread = kthread_create(tpool_main, NULL, "threadpool");
-    if (IS_ERR(tpool_manager_thread)) {
-        rv = PTR_ERR(tpool_manager_thread);
+    pwq_collector_thread = kthread_create(pwq_collector_main, NULL, "pwq");
+    if (IS_ERR(pwq_collector_thread)) {
+        rv = PTR_ERR(pwq_collector_thread);
         goto err_out;
     }
-    wake_up_process(tpool_manager_thread);
+    wake_up_process(pwq_collector_thread);
 
-    printk(KERN_INFO "Finished loading threadpool module...\n");
+    printk(KERN_INFO "Finished loading pthread_workqueue module...\n");
     return rv;
 
 err_out:
@@ -129,21 +131,21 @@ err_out:
     return rv;
 }
 
-static void __exit tpool_end(void)
+static void __exit pwq_end(void)
 {
-    printk(KERN_INFO "Unloading threadpool module\n");
+    printk(KERN_INFO "Unloading pthread_workqueue module\n");
 
-    /* Remove /dev/threadpool */
-    device_destroy(tpool_class, MKDEV(tpool_major,0));
-    class_destroy(tpool_class);
-    unregister_chrdev(tpool_major, "threadpool");
+    /* Remove the device node */
+    device_destroy(pwq_class, MKDEV(pwq_major,0));
+    class_destroy(pwq_class);
+    unregister_chrdev(pwq_major, PWQ_DEVICE_NAME);
 
-    kthread_stop(tpool_manager_thread);
+    kthread_stop(pwq_collector_thread);
 }
 
-module_init(tpool_start);
-module_exit(tpool_end);
+module_init(pwq_start);
+module_exit(pwq_end);
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Mark Heily <mark@heily.com>");
-MODULE_DESCRIPTION("thread pool global load balancing");
+MODULE_DESCRIPTION("pthread_workqueue");

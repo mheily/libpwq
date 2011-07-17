@@ -16,8 +16,8 @@
 
 # TODO: add libdispatch to TESTS
 
-TESTS=api latency idle witem_cache
-EXTRA_TESTS=
+TESTS=api latency witem_cache
+EXTRA_TESTS=idle
 
 all clean check:
 	for x in $(TESTS) ; do cd $$x && make $@ && cd .. ; done
