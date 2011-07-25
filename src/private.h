@@ -61,7 +61,7 @@
 /* Whether to use real-time threads for the workers if available */
 
 extern unsigned int PWQ_RT_THREADS;
-extern time_t PWQ_SPIN_USEC;
+extern unsigned long PWQ_SPIN_LAPS;
 extern unsigned int PWQ_SPIN_THREADS;
 
 /* A limit of the number of cpu:s that we view as available, useful when e.g. using processor sets */
@@ -77,6 +77,15 @@ extern unsigned int PWQ_ACTIVE_CPU;
 
 #define CACHELINE_SIZE	64
 #define ROUND_UP_TO_CACHELINE_SIZE(x)	(((x) + (CACHELINE_SIZE - 1)) & ~(CACHELINE_SIZE - 1))
+
+/* We should perform a hardware pause when using the optional busy waiting, see: 
+   http://software.intel.com/en-us/articles/ap949-using-spin-loops-on-intel-pentiumr-4-processor-and-intel-xeonr-processor/ */
+
+#if defined(__i386__) || defined(__x86_64__)
+#define _hardware_pause() __asm__("pause")
+#else
+#define _hardware_pause() __asm__("")
+#endif
 
 /*
  * The work item cache, has three different optional implementations:
