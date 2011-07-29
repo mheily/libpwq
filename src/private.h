@@ -95,7 +95,7 @@ extern unsigned int PWQ_ACTIVE_CPU;
 
 #elif defined(_WIN32)
 
-#define _hardware_pause()  __asm{_emit 0xf3};__asm {_emit 0x90};
+#define _hardware_pause() do { __asm{_emit 0xf3}; __asm {_emit 0x90}; } while (0)
 
 #else
 
