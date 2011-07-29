@@ -79,13 +79,31 @@ extern unsigned int PWQ_ACTIVE_CPU;
 #define ROUND_UP_TO_CACHELINE_SIZE(x)	(((x) + (CACHELINE_SIZE - 1)) & ~(CACHELINE_SIZE - 1))
 
 /* We should perform a hardware pause when using the optional busy waiting, see: 
-   http://software.intel.com/en-us/articles/ap949-using-spin-loops-on-intel-pentiumr-4-processor-and-intel-xeonr-processor/ */
+   http://software.intel.com/en-us/articles/ap949-using-spin-loops-on-intel-pentiumr-4-processor-and-intel-xeonr-processor/ 
+ rep/nop / 0xf3+0x90 are the same as the symbolic 'pause' instruction
+ */
 
-#if defined(__i386__) || defined(__x86_64__)
-#define _hardware_pause() __asm__("pause")
+#if defined(__i386__) || defined(__x86_64__) || defined(__i386) || defined(__amd64)
+
+#if defined(__SUNPRO_CC)
+
+#define _hardware_pause()  asm volatile("rep; nop\n");
+
+#elif defined(__GNUC__)
+
+#define _hardware_pause()  __asm__ __volatile__("pause");
+
+#elif defined(_WIN32)
+
+#define _hardware_pause()  __asm{_emit 0xf3};__asm {_emit 0x90};
+
 #else
-#define _hardware_pause() __asm__("")
+
+#define _hardware_pause() __asm__("pause")
+
 #endif
+
+#endif 
 
 /*
  * The work item cache, has three different optional implementations:
