@@ -210,6 +210,10 @@ wqlist_scan(int *queue_priority)
             do
             {
                 new_mask = atomic_and(&wqlist_mask, ~(wqlist_index_bit));
+
+                if (slowpath((new_mask & wqlist_index_bit))) // if we would race, issue pause instruction
+                    _hardware_pause();
+                
             } while (new_mask & wqlist_index_bit);
         }
         if (queue_priority != NULL)
@@ -656,6 +660,10 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
             do
             {
                 new_mask = atomic_or(&wqlist_mask, wqlist_index_bit);
+
+                if (slowpath((!(new_mask & wqlist_index_bit)))) // if we would race, issue pause instruction
+                    _hardware_pause();
+
             } while (!(new_mask & wqlist_index_bit));
         }
         
