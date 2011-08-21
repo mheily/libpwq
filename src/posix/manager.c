@@ -165,16 +165,18 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
         if (ocwq[workq->queueprio] == NULL) {
             ocwq[workq->queueprio] = workq;
             workq->wqlist_index = workq->queueprio;
+            dbg_printf("created workqueue (ocommit=1, prio=%d)", workq->queueprio);
         } else {
-            puts("queue already exists\n");
+            printf("oc queue %d already exists\n", workq->queueprio);
             abort();
         }
     } else {
         if (wqlist[workq->queueprio] == NULL) {
             wqlist[workq->queueprio] = workq; //FIXME: sort by priority
             workq->wqlist_index = workq->queueprio;
+            dbg_printf("created workqueue (ocommit=0, prio=%d)", workq->queueprio);
         } else {
-            puts("queue already exists\n");
+            printf("queue %d already exists\n", workq->queueprio);
             abort();
         }
     }

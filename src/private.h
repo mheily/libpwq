@@ -47,12 +47,12 @@
 #include "debug.h"
 
 /* The maximum number of workqueues that can be created.
-   This is based on libdispatch only needing 6 workqueues.
+   This is based on libdispatch only needing 8 workqueues.
    */
 #define PTHREAD_WORKQUEUE_MAX 31
 
 /* The total number of priority levels. */
-#define WORKQ_NUM_PRIOQUEUE 3
+#define WORKQ_NUM_PRIOQUEUE 4
 
 /* Signatures/magic numbers.  */
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE
