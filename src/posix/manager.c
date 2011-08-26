@@ -343,7 +343,7 @@ worker_main(void *arg)
                     unsigned long current_lap = 0;
                     
                     // Spin until we get an item or PWQ_SPIN_LAPS have passed
-                    while (!witem && (current_lap <= PWQ_SPIN_LAPS))
+                    while (!witem && ((current_lap <= PWQ_SPIN_LAPS) || (PWQ_SPIN_LAPS == 0)))
                     {
                         witem = wqlist_scan(&queue_priority);
                         if (!witem)
