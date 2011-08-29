@@ -21,7 +21,7 @@ DPKGFLAGS=-uc -us
 
 include config.mk
 
-all: $(PROGRAM).so testing
+all: $(PROGRAM).so $(PROGRAM).a testing
 
 %.dll: $(OBJS)
 	$(LD) -o $@ $(LDFLAGS) $(OBJS) $(LDADD)
