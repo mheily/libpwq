@@ -1,0 +1,11 @@
+prefix=@@PREFIX@@
+exec_prefix=${prefix}
+libdir=@@LIBDIR@@
+includedir=@@INCLUDEDIR@@
+
+Name: @@PROGRAM@@
+Description: Emulates pthread_workqueue(3) API
+Version: @@VERSION@@
+Requires: 
+Libs: @@LIBDEPENDS@@ -lpthread
+Libs.private: @@LIBDEPENDS@@
