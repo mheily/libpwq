@@ -49,7 +49,9 @@ pthread_workqueue_init_np(void)
     DEBUG_WORKQUEUE = 0;
 #else
     DEBUG_WORKQUEUE = (getenv("PWQ_DEBUG") == NULL) ? 0 : 1;
-# ifndef _WIN32
+#endif
+
+#ifndef _WIN32
     PWQ_RT_THREADS = (getenv("PWQ_RT_THREADS") == NULL) ? 0 : 1;
     PWQ_ACTIVE_CPU = (getenv("PWQ_ACTIVE_CPU") == NULL) ? 0 : atoi(getenv("PWQ_ACTIVE_CPU"));
 
@@ -58,8 +60,6 @@ pthread_workqueue_init_np(void)
     
     if (getenv("PWQ_SPIN_THREADS") != NULL)
         PWQ_SPIN_THREADS =  atoi(getenv("PWQ_SPIN_THREADS"));
-
-# endif
 #endif
 
     if (manager_init() < 0)
