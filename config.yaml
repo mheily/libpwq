@@ -15,7 +15,7 @@ libraries:
     ldadd: "-lpthread -lrt"
     sources: [ src/api.c, src/$(STANDARD_API)/manager.c, src/$(STANDARD_API)/thread_info.c, src/witem_cache.c, src/$(STANDARD_API)/thread_rt.c ]
 
-extra_dist: "LICENSE"
+extra_dist: [ 'LICENSE', 'src/*.[ch]', 'src/*/*.[ch]' ]
 
 # Package metadata
 #pkg_summary="pthread_workqueue library"
