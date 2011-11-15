@@ -15,6 +15,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+$LOAD_PATH << File.dirname(__FILE__) + '/makeconf'
+
 require 'makeconf'
 
 m = Makeconf.new()
