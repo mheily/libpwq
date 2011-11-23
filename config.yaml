@@ -17,6 +17,26 @@ libraries:
 
 extra_dist: [ 'LICENSE', 'src/*.[ch]', 'src/*/*.[ch]' ]
 
+tests:
+
+  api:
+    sources: [ testing/api/test.c ]
+    cflags: '-g -O0 -I. -Iinclude'
+    ldflags: '-Wl,-rpath,$(CURDIR) -L$(CURDIR)'
+    ldadd: '-lpthread_workqueue -lpthread -lrt' 
+
+  latency:
+    sources: [ testing/latency/latency.c ]
+    cflags: '-I. -I./include'
+    ldflags: '-Wl,-rpath,$(CURDIR) -L$(CURDIR)'
+    ldadd: '-lpthread_workqueue -lpthread -lrt' 
+
+  witem_cache:
+    sources: [ testing/witem_cache/test.c ]
+    cflags: '-I. -I./include'
+    ldflags: '-Wl,-rpath,$(CURDIR) -L$(CURDIR)'
+    ldadd: '-lpthread_workqueue -lpthread -lrt' 
+
 # Package metadata
 #pkg_summary="pthread_workqueue library"
 #pkg_description="pthread_workqueue library"
