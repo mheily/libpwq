@@ -12,6 +12,7 @@ libraries:
     abi_major: 0
     abi_minor: 0
     cflags: "-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src"
+    ldflags: '-Wl,-no-undefined' #"/usr/lib/libpthread_workqueue.so -lrt"
     ldadd: "-lpthread -lrt"
     sources: [ src/api.c, src/$(STANDARD_API)/manager.c, src/$(STANDARD_API)/thread_info.c, src/witem_cache.c, src/$(STANDARD_API)/thread_rt.c ]
 
@@ -21,20 +22,14 @@ tests:
 
   api:
     sources: [ testing/api/test.c ]
-    cflags: '-g -O0 -I. -Iinclude'
-    ldflags: '-Wl,-rpath,$(CURDIR) -L$(CURDIR)'
     ldadd: '-lpthread_workqueue -lpthread -lrt' 
 
   latency:
     sources: [ testing/latency/latency.c ]
-    cflags: '-I. -I./include'
-    ldflags: '-Wl,-rpath,$(CURDIR) -L$(CURDIR)'
     ldadd: '-lpthread_workqueue -lpthread -lrt' 
 
   witem_cache:
     sources: [ testing/witem_cache/test.c ]
-    cflags: '-I. -I./include'
-    ldflags: '-Wl,-rpath,$(CURDIR) -L$(CURDIR)'
     ldadd: '-lpthread_workqueue -lpthread -lrt' 
 
 # Package metadata
