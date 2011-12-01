@@ -21,15 +21,15 @@ tests:
 
   api:
     sources: [ testing/api/test.c ]
-    ldadd: '-lpthread_workqueue -lpthread -lrt' 
+    ldadd: '-lpthread_workqueue' 
 
   latency:
     sources: [ testing/latency/latency.c ]
-    ldadd: '-lpthread_workqueue -lpthread -lrt' 
+    ldadd: '-lpthread_workqueue' 
 
   witem_cache:
     sources: [ testing/witem_cache/test.c ]
-    ldadd: '-lpthread_workqueue -lpthread -lrt' 
+    ldadd: '-lpthread_workqueue' 
 
 # Package metadata
 #pkg_summary="pthread_workqueue library"
