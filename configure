@@ -20,8 +20,9 @@ $LOAD_PATH << File.dirname(__FILE__) + '/makeconf'
 
 require 'makeconf'
 
-m = Makeconf.new()
+pthread_libs = Platform.is_windows? ? [] : ['-lpthread', '-lrt']
 
+m = Makeconf.new()
 
 p = Project.new({
         :id => 'libpthread_workqueue',
@@ -36,13 +37,13 @@ p.build Library.new({
         :cflags => '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src',
         :sources => [ 'src/*.c',
             (Platform.is_windows? ? 'src/windows/*.c' : 'src/posix/*.c') ],
-        :ldadd => Platform.is_windows? ? [] : ['-lpthread', '-lrt'],
+        :ldadd => [ pthread_libs ],
         })
 
 p.test(Binary.new(
         :id => 'api',
         :sources => [ 'testing/api/test.c' ],
-        :ldadd => '-lpthread_workqueue'
+        :ldadd => ['-lpthread_workqueue', pthread_libs ]
         ))
 
 
