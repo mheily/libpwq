@@ -20,6 +20,9 @@ $LOAD_PATH << File.dirname(__FILE__) + '/makeconf'
 
 require 'makeconf'
 
+sources = [ 'src/*.c',
+            (Platform.is_windows? ? 'src/windows/*.c' : 'src/posix/*.c') ]
+cflags = '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src'
 pthread_libs = Platform.is_windows? ? [] : ['-lpthread', '-lrt']
 
 m = Makeconf.new()
@@ -32,11 +35,17 @@ p = Project.new({
         :headers => 'pthread_workqueue.h',
         })
 
-p.build Library.new({
+p.build SharedLibrary.new({
         :id => 'libpthread_workqueue',
-        :cflags => '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src',
-        :sources => [ 'src/*.c',
-            (Platform.is_windows? ? 'src/windows/*.c' : 'src/posix/*.c') ],
+        :cflags => cflags,
+        :sources => sources,
+        :ldadd => [ pthread_libs ],
+        })
+
+p.build StaticLibrary.new({
+        :id => 'libpthread_workqueue',
+        :cflags => cflags,
+        :sources => sources,
         :ldadd => [ pthread_libs ],
         })
 
