@@ -27,27 +27,20 @@ pthread_libs = Platform.is_windows? ? [] : ['-lpthread', '-lrt']
 
 m = Makeconf.new()
 
-p = Project.new({
-        :id => 'libpthread_workqueue',
-        :version => '0.8.2',
-        :extra_dist => ['LICENSE', 'src/*.[ch]', 'src/*/*.[ch]'],
-        :manpages => 'pthread_workqueue.3',
-        :headers => 'pthread_workqueue.h',
-        })
-
-p.build SharedLibrary.new({
-        :id => 'libpthread_workqueue',
+p = Project.new(
+  :id => 'libpthread_workqueue',
+  :version => '0.8.2',
+  :extra_dist => ['LICENSE', 'src/*.[ch]', 'src/*/*.[ch]'],
+  :manpages => 'pthread_workqueue.3',
+  :headers => 'pthread_workqueue.h',
+  :libraries => {
+     'libpthread_workqueue' => {
         :cflags => cflags,
         :sources => sources,
         :ldadd => [ pthread_libs ],
-        })
-
-p.build StaticLibrary.new({
-        :id => 'libpthread_workqueue',
-        :cflags => cflags,
-        :sources => sources,
-        :ldadd => [ pthread_libs ],
-        })
+        },
+  }
+)
 
 p.test(Binary.new(
         :id => 'api',
