@@ -25,9 +25,7 @@ sources = [ 'src/*.c',
 cflags = '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src'
 pthread_libs = Platform.is_windows? ? [] : ['-lpthread', '-lrt']
 
-m = Makeconf.new()
-
-p = Project.new(
+Makeconf.new(
   :id => 'libpthread_workqueue',
   :version => '0.8.2',
   :extra_dist => ['LICENSE', 'src/*.[ch]', 'src/*/*.[ch]'],
@@ -39,43 +37,26 @@ p = Project.new(
         :sources => sources,
         :ldadd => [ pthread_libs ],
         },
+  },
+  :tests => {
+    'api' => {
+        :sources => [ 'testing/api/test.c' ],
+        :ldadd => ['-lpthread_workqueue', pthread_libs ]
+        },
+    'latency' => {
+        :sources => [ 'testing/latency/latency.c' ],
+        :ldadd => ['-lpthread_workqueue', pthread_libs ]
+    },
+    'witem_cache' => {
+        :sources => [ 'testing/witem_cache/test.c' ],
+        :ldadd => ['-lpthread_workqueue', pthread_libs ]
+    },
   }
 )
 
-p.test(Binary.new(
-        :id => 'api',
-        :sources => [ 'testing/api/test.c' ],
-        :ldadd => ['-lpthread_workqueue', pthread_libs ]
-        ))
-
-
-m.configure(p)
-m.finalize
-
-#headers: 
-#  - pthread_workqueue.h
-
-#manpages:
-#  - pthread_workqueue.3
-#
-#extra_dist: [ 'LICENSE', 'src/*.[ch]', 'src/*/*.[ch]' ]
-#
-#tests:
-#
-#  api:
-#    sources: [ testing/api/test.c ]
-#    ldadd: '-lpthread_workqueue' 
-#
-#  latency:
-#    sources: [ testing/latency/latency.c ]
-#    ldadd: '-lpthread_workqueue' 
-#
-#  witem_cache:
-#    sources: [ testing/witem_cache/test.c ]
-#    ldadd: '-lpthread_workqueue' 
-#
 # Package metadata
 #pkg_summary="pthread_workqueue library"
+
 #pkg_description="pthread_workqueue library"
 #license="BSD"
 #author="Mark Heily"
