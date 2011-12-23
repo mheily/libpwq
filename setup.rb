@@ -21,14 +21,16 @@ require 'makeconf'
 
 # FIXME: use arrays instead of strings for cflags and ldflags
 sources = [ 'src/*.c' ]
-cflags = '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -I./include -I./src'
+cflags = '-I./include -I./src'
 ldadd = []
 ldflags = ''
 if Platform.is_windows?
   sources.push 'src/windows/*.c'
-  cflags += ' -mthreads'
-  ldadd.push '-mthreads'
+# For GCC:
+#  cflags += ' -mthreads'
+#  ldadd.push '-mthreads'
 else
+  cflags += '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99'
   sources.push 'src/posix/*.c'
   ldadd.push '-lpthread', '-lrt'
 end
