@@ -15,7 +15,7 @@
 #
 
 $VERBOSE = true
-$LOAD_PATH << File.dirname(__FILE__) + '/makeconf'
+$LOAD_PATH << 'makeconf'
 
 require 'makeconf'
 
@@ -38,7 +38,7 @@ if Platform.is_solaris?
   ldflags.push ' -lumem'
 end
 
-Makeconf.new(
+Makeconf.configure Project.new(
   :id => 'libpthread_workqueue',
   :version => '0.8.2',
   :license => 'BSD',

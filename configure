@@ -15,4 +15,4 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-exec ruby -- setup.rb $*
+exec ruby -- setup.rbw $*
