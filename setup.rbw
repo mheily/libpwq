@@ -47,7 +47,7 @@ Makeconf.configure Project.new(
   :description => 'pthread_workqueue library',
   :extra_dist => ['LICENSE', 'src/*.[ch]', 'src/*/*.[ch]'],
   :manpages => 'pthread_workqueue.3',
-  :headers => 'pthread_workqueue.h',
+  :headers => 'include/pthread_workqueue.h',
   :libraries => {
      'libpthread_workqueue' => {
         :cflags => cflags,

@@ -159,7 +159,7 @@ errout:
  /proc/self
  This directory refers to the process accessing the /proc filesystem, and is identical to the /proc directory named by the process ID of the same process.
  
- ÑÑÑÑÑÑÑ
+ ----------
  
  /proc/[number]/stat
  Status information about the process. This is used by ps(1). It is defined in /usr/src/linux/fs/proc/array.c.
