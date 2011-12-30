@@ -55,6 +55,18 @@ Makeconf.configure(
         :ldadd => ldadd,
         },
   },
+  :targets => [
+     # Exercise as much of the build system as possible
+     Target.new('full-test', [], 
+        [
+            'svn up',
+            './configure',
+            'make clean all check',
+            'rm -rf /tmp/foo',
+            'mkdir /tmp/foo',
+            'make install DESTDIR=/tmp/foo',
+        ]),
+  ],
   :tests => {
     'api' => {
         :sources => [ 'testing/api/test.c' ],
