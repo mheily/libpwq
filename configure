@@ -35,7 +35,7 @@ else
   ldadd.push '-lpthread', '-lrt'
 end
 if Platform.is_solaris?
-  ldflags.push ' -lumem'
+  ldadd.push '-lumem'
 end
 
 Makeconf.configure(
