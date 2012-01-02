@@ -333,12 +333,10 @@ worker_main(void *arg)
             // in low latency configurations using dedicated processor sets)
             if ((PWQ_SPIN_THREADS > 0) && (current_threads_spinning <= PWQ_SPIN_THREADS))
             {
-                atomic_inc(&current_threads_spinning);
-
                 // If we are racing with another thread, let's skip
                 // spinning and instead go through the slowpath below
 
-                if (current_threads_spinning <= PWQ_SPIN_THREADS)
+                if (atomic_inc_nv(&current_threads_spinning) <= PWQ_SPIN_THREADS)
                 {
                     unsigned long current_lap = 0;
                     
