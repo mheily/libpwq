@@ -61,7 +61,6 @@
 /* Whether to use real-time threads for the workers if available */
 
 extern unsigned int PWQ_RT_THREADS;
-extern unsigned long PWQ_SPIN_LAPS;
 extern unsigned int PWQ_SPIN_THREADS;
 
 /* A limit of the number of cpu:s that we view as available, useful when e.g. using processor sets */
