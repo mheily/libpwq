@@ -92,16 +92,16 @@ worker_idle_threshold_per_cpu(void)
         case 4:
           return 2;
         case 6:
-          return 3;
+          return 4;
         case 8:
         case 12:
-          return 4;
+          return 6;
         case 16:
         case 24:
-          return 6;
+          return 8;
         case 32:
         case 64:
-          return 8;
+          return 12;
         default:
             return cpu_count / 4;
     }
@@ -143,7 +143,7 @@ manager_init(void)
 
     /* Determine the initial thread pool constraints */
     worker_min = 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
-    worker_idle_threshold = worker_idle_threshold_per_cpu();
+    worker_idle_threshold = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : worker_idle_threshold_per_cpu();
 
     if (pthread_atfork(NULL, NULL, manager_reinit) < 0) {
         dbg_perror("pthread_atfork()");
@@ -342,7 +342,7 @@ worker_main(void *arg)
         
         /* Time to go to sleep and wait if no witem retrieved */
 
-        if (!witem)
+        if (slowpath(!witem))
         {            
             /*
              TODO: Consider using pthread_cond_timedwait() so that
@@ -512,38 +512,43 @@ manager_main(void *unused __attribute__ ((unused)))
         // If no workers available, check if we should create a new one
         if (scoreboard.idle == 0 && (scoreboard.count > 0)) // last part required for an extremely unlikely race at startup
         {
-            scoreboard.load = get_load_average();
-            
-            if ((scoreboard.load < load_max) && (scoreboard.count < worker_max)) 
+            // allow cheap rampup up to worker_idle_threshold without going to /proc / checking load average
+            if (scoreboard.count < worker_idle_threshold) 
             {
-                if (scoreboard.count < worker_idle_threshold) // allow cheap rampup up to worker_idle_threshold without going to /proc
+                worker_start();
+            }                
+            else 
+            {
+                // otherwise check if load / stalled threads allows for new creation unless we hit worker_max ceiling
+                
+                if (scoreboard.count < worker_max)
                 {
-                    worker_start();
-                }
-                else // check through /proc, will be a bit more expensive in terms of latency
-                if (threads_runnable(&current_thread_count) == 0)
-                {
-                    // only start thread if we have less runnable threads than cpus
-                    if (current_thread_count >= cpu_count)
+                    if (threads_runnable(&current_thread_count) != 0)
+                        current_thread_count = 0;
+                    
+                    // only start thread if we have less runnable threads than cpus and load allows it
+                    if (current_thread_count < cpu_count)
+                    {
+                        if (scoreboard.load <= load_max) 
+                        {
+                            worker_start();
+                        }
+                        else
+                        {
+                            dbg_printf("Not spawning worker thread, scoreboard.load = %d > load_max = %d", 
+                                       scoreboard.load, load_max);
+                        }
+                    }
+                    else
                     {
                         dbg_printf("Not spawning worker thread, thread_runnable = %d >= cpu_count = %d", 
                                    current_thread_count, cpu_count);
                     }
-                    else
-                    {
-                        worker_start();
-                    }
                 }
-                else // always start thread if we can't get runnable count
+                else
                 {
-                    worker_start();
-                }
-            }
-            else // high load, allow rampup up to worker_idle_threshold regardless of this
-            {
-                if (scoreboard.count < worker_idle_threshold) 
-                {
-                    worker_start();
+                    dbg_printf("Not spawning worker thread, scoreboard.count = %d >= worker_max = %d", 
+                               scoreboard.count, worker_max);
                 }                
             }
         }
@@ -551,6 +556,8 @@ manager_main(void *unused __attribute__ ((unused)))
         {
             if (cond_wait_rv == ETIMEDOUT) // Only check for ramp down on the 'timer tick'
             {
+                scoreboard.load = get_load_average(); // update internal stat, avoid doing it in critical path for creating new threads...
+                
                 if ((scoreboard.idle - worker_idle_threshold) > 0) // only accumulate if there are 'too many' idle threads
                 {
                     worker_idle_seconds_accumulated += scoreboard.idle; // keep track of many idle 'thread seconds' we have
