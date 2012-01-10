@@ -319,46 +319,44 @@ worker_main(void *arg)
 
         witem = wqlist_scan(&queue_priority);
 
-        // Only take overhead of sleeping and/or spinning if we 
-        // could not get a witem cheaply using the spinlock above
-        if (!witem)
+        // Optional busy loop for getting the next item for a while if so configured
+        // We'll only spin limited number of threads at a time (this is really mostly useful when running
+        // in low latency configurations using dedicated processor sets, usually a single spinner makes sense)
+        
+        if (!witem && (PWQ_SPIN_THREADS > 0))
         {
-            // Optional busy loop for getting the next item for a while if so configured
-            // We'll only spin limited thread at a time (this is really mostly useful when running
-            // in low latency configurations using dedicated processor sets)
-            if ((PWQ_SPIN_THREADS > 0) && (current_threads_spinning <= PWQ_SPIN_THREADS))
+            // If we are racing with another thread, let's skip
+            // spinning and instead go through the slowpath below
+            // otherwise, spin until we get an item 
+            
+            if (atomic_inc_nv(&current_threads_spinning) <= PWQ_SPIN_THREADS)
             {
-                // If we are racing with another thread, let's skip
-                // spinning and instead go through the slowpath below
-                // otherwise, spin until we get an item 
-
-                if (atomic_inc_nv(&current_threads_spinning) <= PWQ_SPIN_THREADS)
+                while ((witem = wqlist_scan(&queue_priority)) == NULL)
                 {
-                    while ((witem = wqlist_scan(&queue_priority)) == NULL)
-                    {
-                        _hardware_pause();
-                    }
+                    _hardware_pause();
                 }
-                
-                atomic_dec(&current_threads_spinning);
             }
             
-            if (!witem)
-            {
-              /*
-                 TODO: Consider using pthread_cond_timedwait() so that
-                 workers can self-terminate if they are idle too long.
-                 This would also be a failsafe in case there are bugs
-                 with the scoreboard that cause us to "leak" workers.
-              */
+            atomic_dec(&current_threads_spinning);
+        }
+        
+        /* Time to go to sleep and wait if no witem retrieved */
 
-              pthread_mutex_lock(&wqlist_mtx);
+        if (!witem)
+        {            
+            /*
+             TODO: Consider using pthread_cond_timedwait() so that
+             workers can self-terminate if they are idle too long.
+             This would also be a failsafe in case there are bugs
+             with the scoreboard that cause us to "leak" workers.
+             */
 
-              while ((witem = wqlist_scan(&queue_priority)) == NULL)
-                 pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
-                    
-              pthread_mutex_unlock(&wqlist_mtx);
-            }
+            pthread_mutex_lock(&wqlist_mtx);
+            
+            while ((witem = wqlist_scan(&queue_priority)) == NULL)
+                pthread_cond_wait(&wqlist_has_work, &wqlist_mtx);
+            
+            pthread_mutex_unlock(&wqlist_mtx);
         }
 
         atomic_dec(&scoreboard.idle);
