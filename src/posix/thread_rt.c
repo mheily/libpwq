@@ -58,10 +58,12 @@ void ptwq_set_current_thread_priority(int priority)
             retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "TS", 0); // run low prio queues as time sharing
             break;
         case WORKQ_DEFAULT_PRIOQUEUE:
-            retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "RT", RT_KY_PRI, WORKQ_NUM_PRIOQUEUE - priority - 1, 0);
+            retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "TS", 0); // run low prio queues as time sharing
+//            retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "RT", RT_KY_PRI, WORKQ_NUM_PRIOQUEUE - priority - 1, 0);
             break;
         case WORKQ_HIGH_PRIOQUEUE:
-            retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "RT", RT_KY_PRI, WORKQ_NUM_PRIOQUEUE - priority - 1, 0);
+            retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "FX", 0);
+//            retval = priocntl(P_LWPID, P_MYID, PC_SETXPARMS, "RT", RT_KY_PRI, WORKQ_NUM_PRIOQUEUE - priority - 1, 0);
             break;
         default:
             dbg_printf("Unknown priority level = %u", priority);
