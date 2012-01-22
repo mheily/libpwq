@@ -41,6 +41,9 @@
 # include "windows/platform.h"
 #else
 # include "posix/platform.h"
+# if __linux__
+#  include "linux/platform.h"
+# endif
 #endif
 
 #include "pthread_workqueue.h"

@@ -33,9 +33,12 @@ else
   cflags.push '-Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99'
   sources.push 'src/posix/*.c'
   ldadd.push '-lpthread', '-lrt'
-end
-if Platform.is_solaris?
-  ldadd.push '-lumem'
+  if Platform.is_linux?
+    sources.push 'src/linux/*.c'
+  end
+  if Platform.is_solaris?
+    ldadd.push '-lumem'
+  end
 end
 
 Makeconf.configure(

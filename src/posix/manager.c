@@ -724,6 +724,16 @@ get_load_average(void)
 {
     double loadavg;
 
+    /* Prefer to use the most recent measurement of the number of running KSEs. */
+
+#if __linux__
+    return linux_get_kse_count();
+#elif defined(__sun)
+    /* TODO -- get the current value from kstat unix:0:sysinfo:runque */
+#endif
+
+    /* Fallback to using the 1-minute load average. */
+
     /* TODO: proper error handling */
     if (getloadavg(&loadavg, 1) != 1) {
         dbg_perror("getloadavg(3)");
