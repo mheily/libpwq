@@ -485,7 +485,7 @@ manager_main(void *unused __attribute__ ((unused)))
     unsigned int worker_max, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
-    unsigned int i;
+    unsigned int i, idle_surplus_threads = 0;
     int sem_timedwait_rv = 0;
     sigset_t sigmask;
     struct timespec   ts;
@@ -544,6 +544,10 @@ manager_main(void *unused __attribute__ ((unused)))
                 {
                     if (threads_runnable(&current_thread_count) != 0)
                         current_thread_count = 0;
+                    else
+                        current_thread_count--; // decrease by one as we don't want to count the manager thread who 
+                                                // usually will be runnable when testing this...
+                    // TODO: We should instead pass our thread id to thread_runnable() 
                     
                     // only start thread if we have less runnable threads than cpus and load allows it
                     if (current_thread_count < cpu_count)
@@ -601,14 +605,15 @@ manager_main(void *unused __attribute__ ((unused)))
                 if (max_threads_to_stop > 0)
                 {
                     worker_idle_seconds_accumulated = 0; 
-
-                    if (max_threads_to_stop > (scoreboard.idle - worker_idle_threshold))
-                        max_threads_to_stop = (scoreboard.idle - worker_idle_threshold);
+                    idle_surplus_threads = scoreboard.idle - worker_idle_threshold; 
+                    
+                    if (max_threads_to_stop > idle_surplus_threads)
+                        max_threads_to_stop = idle_surplus_threads;
 
                     // Only stop threads if we actually have 'too many' idle ones in the pool
-                    if (scoreboard.idle > worker_idle_threshold)
+                    for (i = 0; i < max_threads_to_stop; i++)
                     {
-                        for (i = 0; i < max_threads_to_stop; i++)
+                        if (scoreboard.idle > worker_idle_threshold)
                         {
                             dbg_puts("Removing one thread from the thread pool");
                             worker_stop();
