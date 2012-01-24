@@ -32,6 +32,6 @@
  * Platform-specific functions for Linux
  */
 
-unsigned int linux_get_kse_count(void);
+unsigned int linux_get_runqueue_length(void);
 
 #endif /* _LIBPWQ_LINUX_PLATFORM_H */

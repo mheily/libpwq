@@ -26,10 +26,16 @@
  */
 
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 
 #include "../private.h"
 
+/* Problem: does not include the length of the runqueue, and
+     subtracting one from the # of actually running processes will
+     always show free CPU even when there is none. */
+#ifdef DEADWOOD 
 unsigned int
 linux_get_kse_count(void)
 {
@@ -71,4 +77,38 @@ linux_get_kse_count(void)
     (void) close(fd);
 
     return ((unsigned int) nkse);
+}
+#endif /*DEADWOOD*/
+
+unsigned int
+linux_get_runqueue_length(void)
+{
+    FILE   *f;
+    char   *buf = NULL;
+    size_t  len = 0;
+    ssize_t bytes;
+    int     runqsz;
+
+    f = fopen("/proc/stat", "r");
+    if (f == NULL) {
+        dbg_perror("fopen() of /proc/stat");
+        return (-1);
+    }
+
+   while ((bytes = getline(&buf, &len, f)) != -1) {
+       if (bytes == 16 && strncmp(buf, "procs_running", 13) == 0) {
+           runqsz = atoi(buf + 14);
+           free(buf);
+           break;
+       }
+   }
+
+   (void) fclose(f);
+
+    /* The manager thread is currently running, but will not perform 
+     * any "real" work. Subtract it from the runqueue size.
+     */
+   runqsz--;
+
+   return ((unsigned int) runqsz);
 }
