@@ -526,8 +526,8 @@ manager_main(void *unused __attribute__ ((unused)))
         
         dbg_puts("manager is awake");
 
-        dbg_printf("load=%u idle=%u workers=%u max_workers=%u worker_min = %u",
-                   scoreboard.load, scoreboard.idle, scoreboard.count, worker_max, worker_min);
+        dbg_printf("idle=%u workers=%u max_workers=%u worker_min = %u",
+                   scoreboard.idle, scoreboard.count, worker_max, worker_min);
                 
         // If no workers available, check if we should create a new one
         if ((scoreboard.idle == 0) && (scoreboard.count > 0) && (pending_thread_create == 0)) // last part required for an extremely unlikely race at startup
@@ -545,15 +545,14 @@ manager_main(void *unused __attribute__ ((unused)))
                 {
                     if (threads_runnable(&current_thread_count) != 0)
                         current_thread_count = 0;
-                    else
-                        current_thread_count--; // decrease by one as we don't want to count the manager thread who 
-                                                // usually will be runnable when testing this...
-                    // TODO: We should instead pass our thread id to thread_runnable() 
                     
                     // only start thread if we have less runnable threads than cpus and load allows it
-                    if (current_thread_count < cpu_count)
+                    
+                    if (current_thread_count <= cpu_count) // <= discounts the manager thread
                     {
-                        if (scoreboard.load <= load_max) 
+                        scoreboard.load = get_load_average(); 
+
+                        if (scoreboard.load <= load_max) // <= discounts the manager thread
                         {
                             if (scoreboard.idle == 0) // someone might have become idle during getting thread count etc.
                                 worker_start();
@@ -569,7 +568,7 @@ manager_main(void *unused __attribute__ ((unused)))
                     }
                     else
                     {
-                        dbg_printf("Not spawning worker thread, thread_runnable = %d >= cpu_count = %d", 
+                        dbg_printf("Not spawning worker thread, thread_runnable = %d > cpu_count = %d", 
                                    current_thread_count, cpu_count);
                     }
                 }
@@ -584,8 +583,6 @@ manager_main(void *unused __attribute__ ((unused)))
         {
             if (sem_timedwait_rv == ETIMEDOUT) // Only check for ramp down on the 'timer tick'
             {
-                scoreboard.load = get_load_average(); // update internal stat, avoid doing it in critical path for creating new threads...
-                
                 if (scoreboard.idle > worker_idle_threshold) // only accumulate if there are 'too many' idle threads
                 {
                     worker_idle_seconds_accumulated += scoreboard.idle; // keep track of many idle 'thread seconds' we have

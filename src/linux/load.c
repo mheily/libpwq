@@ -69,11 +69,6 @@ linux_get_kse_count(void)
     }
     nkse = atoi(p + 1);
 
-    /* The manager thread is currently running, but will not perform any "real" work.
-     * Subtract one from the total number of running KSEs. 
-     */
-    nkse--;
-
     (void) close(fd);
 
     return ((unsigned int) nkse);
@@ -104,11 +99,6 @@ linux_get_runqueue_length(void)
    }
 
    (void) fclose(f);
-
-    /* The manager thread is currently running, but will not perform 
-     * any "real" work. Subtract it from the runqueue size.
-     */
-   runqsz--;
 
    return ((unsigned int) runqsz);
 }

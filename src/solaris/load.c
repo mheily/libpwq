@@ -65,7 +65,7 @@ solaris_get_runqueue_length(void)
     if (previous_updates != 0)
     {
         run_queue = (previous_runque/previous_updates);
-//        dbg_printf("runqueue = %u, updates = %u, ratio = %u \n", previous_runque, previous_updates, run_queue);
+        dbg_printf("runqueue = %u, updates = %u, ratio = %u \n", previous_runque, previous_updates, run_queue);
     }
 
     previous_runque = sysinfo.runque;
@@ -76,9 +76,5 @@ solaris_get_runqueue_length(void)
         return 0;
     }
 
-    /* The manager thread is currently running, but will not perform 
-     * any "real" work. Subtract it from the runqueue size returned.
-     */
-
-    return (run_queue > 0 ? (run_queue - 1) : 0);
+    return run_queue;
 }
