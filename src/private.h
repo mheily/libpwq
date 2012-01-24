@@ -44,6 +44,9 @@
 # if __linux__
 #  include "linux/platform.h"
 # endif
+# if defined(__sun)
+#  include "solaris/platform.h"
+# endif
 #endif
 
 #include "pthread_workqueue.h"
@@ -115,8 +118,11 @@ extern unsigned int PWQ_ACTIVE_CPU;
  * 3. TSD based cache, modelled on libdispatch continuation implementation, can lead to imbalance with assymetric 
  *    producer/consumer threads as allocated memory is cached by the thread freeing it
  */
-
-#define WITEM_CACHE_TYPE 1 // Set to 1, 2 or 3 to specify witem cache implementation to use
+#if defined(__sun)
+#define WITEM_CACHE_TYPE 2 // Use libumem on Solaris by default
+#else
+#define WITEM_CACHE_TYPE 1 // Otherwise fallback to normal malloc/free - change specify witem cache implementation to use
+#endif
 
 struct work {
     STAILQ_ENTRY(work)   item_entry; 

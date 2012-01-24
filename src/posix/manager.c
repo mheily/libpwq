@@ -481,7 +481,7 @@ worker_stop(void)
 static void *
 manager_main(void *unused __attribute__ ((unused)))
 {
-    unsigned int load_max = cpu_count;
+    unsigned int load_max = (cpu_count + 1); // We allow +1 to take manager thread into account
     unsigned int worker_max, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
@@ -719,7 +719,15 @@ get_process_limit(void)
         return (rlim.rlim_max);
     }
 #else
-    /* Solaris doesn't define this limit anywhere I can see.. */
+    /* For Solaris TODO, use maxuprc which is the closest fit, a bit unclear how to access it in a robust way yet */
+    /* http://docs.oracle.com/cd/E19683-01/806-7009/chapter2-109/index.html */
+    /* The default on a current machine is quite high:
+     # echo maxuprc/D | adb -k
+     physmem bfef18
+     maxuprc:
+     maxuprc:        27109           
+     # */
+    
     return (64);
 #endif
 }
@@ -729,12 +737,13 @@ get_load_average(void)
 {
     double loadavg;
 
-    /* Prefer to use the most recent measurement of the number of running KSEs. */
+    /* Prefer to use the most recent measurement of the number of running KSEs
+    for Linux and the kstat unix:0:sysinfo: runque/updates ratio for Solaris . */
 
 #if __linux__
     return linux_get_runqueue_length();
 #elif defined(__sun)
-    /* TODO -- get the current value from kstat unix:0:sysinfo:runque */
+    return solaris_get_runqueue_length();
 #endif
 
     /* Fallback to using the 1-minute load average. */

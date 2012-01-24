@@ -37,7 +37,8 @@ else
     sources.push 'src/linux/*.c'
   end
   if Platform.is_solaris?
-    ldadd.push '-lumem'
+    sources.push 'src/solaris/*.c'
+    ldadd.push '-lumem -lkstat'
   end
 end
 
