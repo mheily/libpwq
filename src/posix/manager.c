@@ -360,6 +360,7 @@ wqlist_scan_wait(int *queue_priority)
     if (slowpath(witem->func == NULL)) 
     {
         dbg_puts("worker exiting..");
+        atomic_dec(&scoreboard.idle);
         atomic_dec(&scoreboard.count);
         witem_free(witem);
         pthread_exit(0);

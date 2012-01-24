@@ -105,7 +105,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
 {
     struct work *witem;
     
-    if (valid_workq(workq) == 0)
+    if ((valid_workq(workq) == 0) || (workitem_func == NULL))
         return (EINVAL);
 
     witem = witem_alloc(workitem_func, workitem_arg);
