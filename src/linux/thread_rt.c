@@ -26,13 +26,10 @@
  *
  */
 
-// Default POSIX implementation doesn't support it, platform-specific code does though.
+#include "platform.h"
+#include "private.h"
 
-#if !(defined(__linux__) || defined(__sun))
-
-int threads_runnable(unsigned int *threads_running)
-{
-    return -1;
+void ptwq_set_current_thread_priority(int priority  __attribute__ ((unused)))
+{    
+    return;
 }
-
-#endif
