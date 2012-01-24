@@ -11,6 +11,10 @@
 		85053B8B14CE8DB5005CD2B9 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
 		85053B8D14CE8E12005CD2B9 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
 		85053B8E14CE8E12005CD2B9 /* load.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = load.c; sourceTree = "<group>"; };
+		85053B9214CEA2AF005CD2B9 /* thread_info.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = thread_info.c; sourceTree = "<group>"; };
+		85053B9314CEA2AF005CD2B9 /* thread_rt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = thread_rt.c; sourceTree = "<group>"; };
+		85053B9514CEA2BE005CD2B9 /* thread_info.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = thread_info.c; sourceTree = "<group>"; };
+		85053B9614CEA2BE005CD2B9 /* thread_rt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = thread_rt.c; sourceTree = "<group>"; };
 		8526C751135328ED00D8FFF9 /* thread_rt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = thread_rt.h; path = src/thread_rt.h; sourceTree = SOURCE_ROOT; };
 		8526C753135328F400D8FFF9 /* thread_rt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = thread_rt.c; sourceTree = "<group>"; };
 		8526C7541353291C00D8FFF9 /* thread_rt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = thread_rt.c; path = src/windows/thread_rt.c; sourceTree = SOURCE_ROOT; };
@@ -43,6 +47,8 @@
 		85053B8914CE8DB5005CD2B9 /* linux */ = {
 			isa = PBXGroup;
 			children = (
+				85053B9514CEA2BE005CD2B9 /* thread_info.c */,
+				85053B9614CEA2BE005CD2B9 /* thread_rt.c */,
 				85053B8B14CE8DB5005CD2B9 /* platform.h */,
 				85053B8A14CE8DB5005CD2B9 /* load.c */,
 			);
@@ -52,6 +58,8 @@
 		85053B8C14CE8E12005CD2B9 /* solaris */ = {
 			isa = PBXGroup;
 			children = (
+				85053B9214CEA2AF005CD2B9 /* thread_info.c */,
+				85053B9314CEA2AF005CD2B9 /* thread_rt.c */,
 				85053B8D14CE8E12005CD2B9 /* platform.h */,
 				85053B8E14CE8E12005CD2B9 /* load.c */,
 			);
