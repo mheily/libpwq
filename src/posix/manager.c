@@ -47,7 +47,7 @@ unsigned volatile int current_threads_spinning = 0; // The number of threads cur
 #define WORKER_IDLE_SECONDS_THRESHOLD 15
 
 /* Function prototypes */
-static unsigned int get_load_average(void);
+static unsigned int get_runqueue_length(void);
 static void * worker_main(void *arg);
 static void * overcommit_worker_main(void *arg);
 static unsigned int get_process_limit(void);
@@ -75,7 +75,7 @@ static int               wqlist_has_manager;
 static pthread_attr_t    detached_attr;
 
 static struct {
-    volatile unsigned int load,
+    volatile unsigned int runqueue_length,
                     count,
                     idle;
     sem_t sb_sem;
@@ -482,7 +482,7 @@ worker_stop(void)
 static void *
 manager_main(void *unused __attribute__ ((unused)))
 {
-    unsigned int load_max = (cpu_count + 1); // We allow +1 to take manager thread into account
+    unsigned int runqueue_length_max = cpu_count; 
     unsigned int worker_max, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
@@ -493,7 +493,7 @@ manager_main(void *unused __attribute__ ((unused)))
     struct timeval    tp;
 
     worker_max = get_process_limit();
-    scoreboard.load = get_load_average();
+    scoreboard.runqueue_length = get_runqueue_length();
 
     /* Block all signals */
     sigfillset(&sigmask);
@@ -532,27 +532,27 @@ manager_main(void *unused __attribute__ ((unused)))
         // If no workers available, check if we should create a new one
         if ((scoreboard.idle == 0) && (scoreboard.count > 0) && (pending_thread_create == 0)) // last part required for an extremely unlikely race at startup
         {
-            // allow cheap rampup up to worker_idle_threshold without going to /proc / checking load average
+            // allow cheap rampup up to worker_idle_threshold without going to /proc / checking run queue length
             if (scoreboard.count < worker_idle_threshold) 
             {
                 worker_start();
             }                
             else 
             {
-                // otherwise check if load / stalled threads allows for new creation unless we hit worker_max ceiling
+                // otherwise check if run queue length / stalled threads allows for new creation unless we hit worker_max ceiling
                 
                 if (scoreboard.count < worker_max)
                 {
                     if (threads_runnable(&current_thread_count) != 0)
                         current_thread_count = 0;
                     
-                    // only start thread if we have less runnable threads than cpus and load allows it
+                    // only start thread if we have less runnable threads than cpus and run queue length allows it
                     
                     if (current_thread_count <= cpu_count) // <= discounts the manager thread
                     {
-                        scoreboard.load = get_load_average(); 
+                        scoreboard.runqueue_length = get_runqueue_length(); 
 
-                        if (scoreboard.load <= load_max) // <= discounts the manager thread
+                        if (scoreboard.runqueue_length <= runqueue_length_max) // <= discounts the manager thread
                         {
                             if (scoreboard.idle == 0) // someone might have become idle during getting thread count etc.
                                 worker_start();
@@ -562,8 +562,8 @@ manager_main(void *unused __attribute__ ((unused)))
                         }
                         else
                         {
-                            dbg_printf("Not spawning worker thread, scoreboard.load = %d > load_max = %d", 
-                                       scoreboard.load, load_max);
+                            dbg_printf("Not spawning worker thread, scoreboard.runqueue_length = %d > runqueue_length_max = %d", 
+                                       scoreboard.runqueue_length, runqueue_length_max);
                         }
                     }
                     else
@@ -731,7 +731,7 @@ get_process_limit(void)
 }
 
 static unsigned int
-get_load_average(void)
+get_runqueue_length(void)
 {
     double loadavg;
 
@@ -744,7 +744,7 @@ get_load_average(void)
     return solaris_get_runqueue_length();
 #endif
 
-    /* Fallback to using the 1-minute load average. */
+    /* Fallback to using the 1-minute load average if proper run queue length can't be determined. */
 
     /* TODO: proper error handling */
     if (getloadavg(&loadavg, 1) != 1) {
