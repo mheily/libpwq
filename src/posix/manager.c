@@ -82,11 +82,13 @@ static struct {
 } scoreboard;
 
 /* Thread limits */
-#define MIN_PROCESS_LIMIT 1
 #define DEFAULT_PROCESS_LIMIT 100
-#define MAX_PROCESS_LIMIT 1000
 
+#if defined(__sun)
+#define MIN_PROCESS_LIMIT 1
+#define MAX_PROCESS_LIMIT 1000
 static const char *solaris_process_limit_cmd = "/usr/sbin/sysdef | /usr/bin/grep v.v_maxup"; // works on both Solaris 10 and 11 portably
+#endif
 
 static unsigned int 
 worker_idle_threshold_per_cpu(void)
