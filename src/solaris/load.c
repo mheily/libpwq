@@ -65,7 +65,7 @@ solaris_get_runqueue_length(void)
     if (previous_updates != 0)
     {
         run_queue = (previous_runque/previous_updates);
-        dbg_printf("runqueue = %u, updates = %u, ratio = %u \n", previous_runque, previous_updates, run_queue);
+        dbg_printf("runqueue = %u, updates = %u, ratio = %u", previous_runque, previous_updates, run_queue);
     }
 
     previous_runque = sysinfo.runque;

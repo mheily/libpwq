@@ -81,6 +81,13 @@ static struct {
     sem_t sb_sem;
 } scoreboard;
 
+/* Thread limits */
+#define MIN_PROCESS_LIMIT 1
+#define DEFAULT_PROCESS_LIMIT 100
+#define MAX_PROCESS_LIMIT 1000
+
+static const char *solaris_process_limit_cmd = "/usr/sbin/sysdef | /usr/bin/grep v.v_maxup"; // works on both Solaris 10 and 11 portably
+
 static unsigned int 
 worker_idle_threshold_per_cpu(void)
 {
@@ -716,17 +723,39 @@ get_process_limit(void)
     } else {
         return (rlim.rlim_max);
     }
-#else
-    /* For Solaris TODO, use maxuprc which is the closest fit, a bit unclear how to access it in a robust way yet */
+#elif defined(__sun)
+
+    /* For Solaris we use maxuprc which is the closest fit */
     /* http://docs.oracle.com/cd/E19683-01/806-7009/chapter2-109/index.html */
     /* The default on a current machine is quite high:
      # echo maxuprc/D | adb -k
      physmem bfef18
      maxuprc:
      maxuprc:        27109           
-     # */
+     # so we clamp it to MIN/MAX PROCESS limit - essentially only supporting
+     a more strict limit than MAX_PROCESS_LIMIT */
+
+    FILE *ptr;
+    unsigned int num = DEFAULT_PROCESS_LIMIT; // we only use the default if we fail to get it from OS
     
-    return (64);
+    if ((ptr = popen(solaris_process_limit_cmd, "r")) != NULL)
+    {
+        if (fscanf(ptr, "%u", &num) == NULL)
+            num = DEFAULT_PROCESS_LIMIT;
+        (void) pclose(ptr);
+    }
+    
+    dbg_printf("Process limit from sysdef: %u", num);
+
+    if (num < MIN_PROCESS_LIMIT)
+        num = MIN_PROCESS_LIMIT;
+    
+    if (num > MAX_PROCESS_LIMIT)
+        num = MAX_PROCESS_LIMIT;
+    
+    return (num);
+#else
+    return (DEFAULT_PROCESS_LIMIT);
 #endif
 }
 
