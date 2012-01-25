@@ -87,8 +87,9 @@ static struct {
 #if defined(__sun)
 #include <rctl.h>
 
-#define MIN_PROCESS_LIMIT 1
+#define MIN_PROCESS_LIMIT 4
 #define MAX_PROCESS_LIMIT 1000
+#define THREADS_RESERVED  5 // arbitrary extra thread reservation
 #endif
 
 static unsigned int 
@@ -493,7 +494,7 @@ static void *
 manager_main(void *unused __attribute__ ((unused)))
 {
     unsigned int runqueue_length_max = cpu_count; 
-    unsigned int worker_max, current_thread_count = 0;
+    unsigned int worker_max, threads_total = 0, current_thread_count = 0;
     unsigned int worker_idle_seconds_accumulated = 0;
     unsigned int max_threads_to_stop = 0;
     unsigned int i, idle_surplus_threads = 0;
@@ -553,7 +554,7 @@ manager_main(void *unused __attribute__ ((unused)))
                 
                 if (scoreboard.count < worker_max)
                 {
-                    if (threads_runnable(&current_thread_count) != 0)
+                    if (threads_runnable(&current_thread_count, &threads_total) != 0)
                         current_thread_count = 0;
                     
                     // only start thread if we have less runnable threads than cpus and run queue length allows it
@@ -735,7 +736,8 @@ get_process_limit(void)
     /* In practice we only support a more strict limit than MAX_PROCESS_LIMIT */
 
     rctlblk_t *rblk;
-    unsigned int num = DEFAULT_PROCESS_LIMIT; // we only use the default if we fail to get it from OS
+    int num = DEFAULT_PROCESS_LIMIT; // we only use the default if we fail to get it from OS
+    unsigned int threads_total = 0, current_thread_count = 0;
 
     if ((rblk = (rctlblk_t *)malloc(rctlblk_size())) == NULL) 
     {
@@ -755,13 +757,18 @@ get_process_limit(void)
 
     free(rblk);  
 
+    if (threads_runnable(&current_thread_count, &threads_total) == 0)
+        num -= threads_total;  // Discount current number of running threads also
+
+    num -= THREADS_RESERVED;  // when task limits enabled, we will fail to create new threads, so leave some room here
+    
     if (num < MIN_PROCESS_LIMIT)
         num = MIN_PROCESS_LIMIT;
     
     if (num > MAX_PROCESS_LIMIT)
         num = MAX_PROCESS_LIMIT;
             
-    return (num);
+    return (unsigned int) (num);
 #else
     return (DEFAULT_PROCESS_LIMIT);
 #endif

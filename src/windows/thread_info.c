@@ -26,7 +26,7 @@
  *
  */
 
-int threads_runnable(unsigned int *threads_running)
+int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 {
     return -1;
 }

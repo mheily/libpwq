@@ -69,7 +69,7 @@
  /proc/self/lstatus
  */
 
-int threads_runnable(unsigned int *threads_running)
+int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 {
     const char *path = "/proc/self/lstatus";
 	int read_fd, retval = -1, i;
@@ -138,6 +138,7 @@ int threads_runnable(unsigned int *threads_running)
     free(lwp_buffer);
     retval = 0;
     *threads_running = running_count;
+    *threads_total = prheader.pr_nent;
     
 errout:
     if (close(read_fd) != 0)

@@ -116,7 +116,7 @@ errout:
 }
 
 
-int threads_runnable(unsigned int *threads_running)
+int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 {
     DIR             *dip;
     struct dirent   *dit;
@@ -126,7 +126,7 @@ int threads_runnable(unsigned int *threads_running)
     char dummy[MAX_RESULT_SIZE+1];
     char state;
     int pid;
-    unsigned int running_count = 0;
+    unsigned int running_count = 0, total_count = 0;
 
     dbg_puts("Checking threads_runnable()");
 
@@ -146,6 +146,7 @@ int threads_runnable(unsigned int *threads_running)
         {
             if (sscanf(thread_data, "%d %s %c", &pid, dummy, &state) == 3)
             {
+                total_count++;
                 dbg_printf("The state for thread %s is %c", dit->d_name, state);
                 switch (state)
                 {
@@ -170,6 +171,7 @@ int threads_runnable(unsigned int *threads_running)
 
     dbg_printf("Running count is %d", running_count);
     *threads_running = running_count;
+    *threads_total = total_count;
     
     return 0;
 }
