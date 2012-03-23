@@ -242,6 +242,8 @@ overcommit_worker_main(void *arg)
         ocwq_idle_threads++;
         dbg_printf("waiting for work (idle=%d)", ocwq_idle_threads);
         rv = pthread_cond_timedwait(&ocwq_has_work, &ocwq_mtx, &ts);
+        /* Even on error/timeout check we have no work to do to avoid lost wakeup */
+        if (ocwq_mask != 0) continue;
         if (rv != 0) {
             /* Normally, the signaler will decrement the idle counter,
                but this path is not taken in response to a signaler.
