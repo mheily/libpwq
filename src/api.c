@@ -45,6 +45,20 @@ valid_workq(pthread_workqueue_t workq)
 int VISIBLE CONSTRUCTOR
 pthread_workqueue_init_np(void)
 {
+    static int pwq_initialized = 0;
+
+    /* This is not reentrant, but is used to make this function idempotent
+       to support static linking.
+
+       Programs which are (or can be) be statically linked against
+       this library should call pthread_workqueue_init_np() early in
+       their main() function. If the program is dynamically linked,
+       this function will be called twice; once by the dynamic linker
+       as a constructor, and once within main().
+     */
+    if (pwq_initialized)
+        return (0);
+
 #ifdef NDEBUG
     DEBUG_WORKQUEUE = 0;
 #else
@@ -62,7 +76,9 @@ pthread_workqueue_init_np(void)
     if (manager_init() < 0)
         return (-1);
 
+    pwq_initialized = 1;
     dbg_puts("pthread_workqueue library initialized");
+
     return (0);
 }
 
