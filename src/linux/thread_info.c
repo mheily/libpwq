@@ -96,7 +96,7 @@ static int _read_file(const char *path, char *result)
 # ifdef __ia64__
     dbg_printf("read %ld from %s", actual_read, path);
 # else
-    dbg_printf("read %zd from %s", actual_read, path);
+    dbg_printf("read %zu from %s", (size_t) actual_read, path);
 #endif
 
     if (actual_read == 0)

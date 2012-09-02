@@ -32,6 +32,11 @@
 
 #include "../private.h"
 
+/* KLUDGE */
+#ifdef ANDROID
+#include "../android/getline.c"
+#endif
+
 /* Problem: does not include the length of the runqueue, and
      subtracting one from the # of actually running processes will
      always show free CPU even when there is none. */

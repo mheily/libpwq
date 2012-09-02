@@ -120,12 +120,14 @@ worker_idle_threshold_per_cpu(void)
     return 2;
 }
 
+#if !defined(ANDROID)
 static void
 manager_reinit(void)
 {
     if (manager_init() < 0)
         abort();
 }
+#endif
 
 int
 manager_init(void)
@@ -163,13 +165,47 @@ manager_init(void)
     worker_min = 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
     worker_idle_threshold = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : worker_idle_threshold_per_cpu();
 
+/* FIXME: should test for symbol instead of for Android */
+#if !defined(ANDROID)
     if (pthread_atfork(NULL, NULL, manager_reinit) < 0) {
         dbg_perror("pthread_atfork()");
         return (-1);
     }
+#endif
 
     return (0);
 }
+
+/* FIXME: should test for symbol instead of for Android */
+#if defined(ANDROID)
+
+#include <fcntl.h>
+
+int getloadavg(double loadavg[], int nelem)
+{
+   int fd;
+   ssize_t len;
+   char buf[80];
+
+   /* FIXME: this restriction allows the code to be simpler */
+   if (nelem != 1)
+       return (-1);
+
+   fd = open("/proc/loadavg", O_RDONLY);
+   if (fd < 0) 
+       return (-1); 
+
+   len = read(fd, &buf, sizeof(buf));
+   (void) close(fd);
+   if (len < 0) 
+       return (-1);
+
+   if (sscanf(buf, "%lf ", &loadavg[0]) < 1)
+       return (-1);
+
+   return (0); 
+}
+#endif /* defined(ANDROID) */
 
 void
 manager_workqueue_create(struct _pthread_workqueue *workq)
@@ -264,6 +300,8 @@ overcommit_worker_main(void *arg)
 
     dbg_printf("worker exiting (idle=%d)", ocwq_idle_threads);
     pthread_exit(NULL);
+    /* NOTREACHED */
+    return (NULL);
 }
 
 static inline void reset_queue_mask(unsigned int wqlist_index)

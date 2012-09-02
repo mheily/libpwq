@@ -41,12 +41,13 @@ else
   end
 end
 
-# ldadd for all Test objects
+# cflags & ldadd for all Test objects
+test_cflags = '-I./include'
 test_ldadd = [ 'libpthread_workqueue.a', '-lpthread', '-lrt' ]
 
 project = Project.new(
   :id       => 'libpthread_workqueue',
-  :version  => '0.8.3',
+  :version  => '0.8.3'
 )
 
 project.add(
@@ -54,27 +55,29 @@ project.add(
     :id => 'pthread_workqueue',
     :cflags => cflags,
     :sources => sources,
-    :ldadd => ldadd,
+    :ldadd => ldadd
     ),
 
   Test.new(
     :id => 'api',
     :sources => [ 'testing/api/test.c' ],
-    :ldadd => test_ldadd,
+    :cflags => test_cflags,
+    :ldadd => test_ldadd
   ),
 
   Test.new(
     :id => 'latency',
     :sources => [ 'testing/latency/latency.c' ],
-    :ldadd => test_ldadd,
+    :cflags => test_cflags,
+    :ldadd => test_ldadd
   ),
 
   Test.new(
     :id => 'witem_cache',
     :sources => [ 'testing/witem_cache/test.c' ],
-    :ldadd => test_ldadd,
-  ),
-
+    :cflags => test_cflags,
+    :ldadd => test_ldadd
+  )
 )
 
 Makeconf.configure(project)
