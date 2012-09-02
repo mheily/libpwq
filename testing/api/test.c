@@ -6,7 +6,7 @@
 #if !defined(_WIN32)
 # include <sys/wait.h>
 # if !defined(NO_CONFIG_H)
-#  include "config.h"
+#  include "../../config.h"
 # endif
 # include <semaphore.h>
 #else
