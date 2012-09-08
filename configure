@@ -52,7 +52,7 @@ project = Project.new(
 
 project.add(
   Library.new(
-    :id => 'pthread_workqueue',
+    :id => 'libpthread_workqueue',
     :cflags => cflags,
     :sources => sources,
     :ldadd => ldadd
