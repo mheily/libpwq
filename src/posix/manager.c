@@ -120,7 +120,7 @@ worker_idle_threshold_per_cpu(void)
     return 2;
 }
 
-#if !defined(ANDROID)
+#if !defined(__ANDROID__)
 static void
 manager_reinit(void)
 {
@@ -166,7 +166,7 @@ manager_init(void)
     worker_idle_threshold = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : worker_idle_threshold_per_cpu();
 
 /* FIXME: should test for symbol instead of for Android */
-#if !defined(ANDROID)
+#if !defined(__ANDROID__)
     if (pthread_atfork(NULL, NULL, manager_reinit) < 0) {
         dbg_perror("pthread_atfork()");
         return (-1);
@@ -177,7 +177,7 @@ manager_init(void)
 }
 
 /* FIXME: should test for symbol instead of for Android */
-#if defined(ANDROID)
+#if defined(__ANDROID__)
 
 #include <fcntl.h>
 
@@ -205,7 +205,7 @@ int getloadavg(double loadavg[], int nelem)
 
    return (0); 
 }
-#endif /* defined(ANDROID) */
+#endif /* defined(__ANDROID__) */
 
 void
 manager_workqueue_create(struct _pthread_workqueue *workq)

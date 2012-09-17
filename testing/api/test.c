@@ -247,6 +247,9 @@ run_overcommit_test(pthread_workqueue_t wq)
     puts("ok\n");
 
     /* FIXME: should use a multiple of the number of CPUs instead of magic number */
+#ifdef __ANDROID__
+    puts("deadlock test -- skipping because Android does not use a thread pool");
+#else
     printf("deadlock test - overcommit enabled ");
     test_rounds = 41;
     for (i = 0; i < 40; i++) {
@@ -255,6 +258,7 @@ run_overcommit_test(pthread_workqueue_t wq)
     additem(ocwq, sem_up, &sem);
     sem_wait(&test_complete);
     puts("ok\n");
+#endif
 }
 
 int main() {
@@ -275,11 +279,13 @@ int main() {
         err(1, "failed");
     printf("ok\n");
 
+#ifndef __ANDROID__
     printf("stress test.. ");
     run_stress_test(wq, 25);
     printf("ok\n");
 
     run_fork_test(wq);
+#endif
 
     //run_deadlock_test();
 //    run_cond_wait_test();

@@ -78,6 +78,7 @@ project.add(
     :cflags => test_cflags,
     :ldadd => test_ldadd
   )
+
 )
 
 Makeconf.configure(project)

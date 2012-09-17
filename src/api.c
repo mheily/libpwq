@@ -73,8 +73,11 @@ pthread_workqueue_init_np(void)
         PWQ_SPIN_THREADS =  atoi(getenv("PWQ_SPIN_THREADS"));
 #endif
 
+/* FIXME -- no threadpool on Android yet */
+#ifndef __ANDROID__
     if (manager_init() < 0)
         return (-1);
+#endif
 
     pwq_initialized = 1;
     dbg_puts("pthread_workqueue library initialized");
@@ -105,7 +108,10 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
         workq->overcommit = attr->overcommit;
     }
 
+/* FIXME -- no threadpool on Android yet */
+#ifndef __ANDROID__
     manager_workqueue_create(workq);
+#endif
 
     dbg_printf("created queue %p", (void *) workq);
 
@@ -119,6 +125,15 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
                      pthread_workitem_handle_t * itemhandlep, 
                      unsigned int *gencountp)
 {
+/* FIXME -- no threadpool on Android yet */
+#ifdef __ANDROID__
+    (void)workq;
+    (void)itemhandlep;
+    (void)gencountp;
+    if ((valid_workq(workq) == 0) || (workitem_func == NULL))
+        return (EINVAL);
+    workitem_func(workitem_arg);
+#else
     struct work *witem;
     
     if ((valid_workq(workq) == 0) || (workitem_func == NULL))
@@ -134,6 +149,7 @@ pthread_workqueue_additem_np(pthread_workqueue_t workq,
     manager_workqueue_additem(workq, witem);
 
     dbg_printf("added item %p to queue %p", (void *) witem, (void *) workq);
+#endif
 
     return (0);
 }

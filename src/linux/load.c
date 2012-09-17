@@ -33,7 +33,7 @@
 #include "../private.h"
 
 /* KLUDGE */
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include "../android/getline.c"
 #endif
 
