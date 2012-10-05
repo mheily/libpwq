@@ -3,5 +3,8 @@ BUGS
 
  * The getline() implementation for Android causes memory corruption and
    crashes halfway through reading the /proc/status file. This only occurs
-   on a quad core tablet.
+   on a quad core tablet. 
+   The workaround makes linux_get_runqueue_length() always return 1, which
+   will cause incorrect behavior in the manager thread.  See r267 for the
+   affected area.
    
