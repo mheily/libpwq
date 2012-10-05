@@ -261,9 +261,11 @@ int main() {
     pthread_workqueue_t wq;
     int rv;
 
-#ifdef MAKE_STATIC
-	pthread_workqueue_init_np();
+#ifdef __linux__
+    printf("runqueue length=%d\n", linux_get_runqueue_length());
 #endif
+
+	pthread_workqueue_init_np();
 
     sem_init(&test_complete, 0, 0);
 

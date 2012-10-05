@@ -32,11 +32,6 @@
 
 #include "../private.h"
 
-/* KLUDGE */
-#ifdef __ANDROID__
-//FIXME: broken: #include "../android/getline.c"
-#endif
-
 /* Problem: does not include the length of the runqueue, and
      subtracting one from the # of actually running processes will
      always show free CPU even when there is none. */
@@ -83,36 +78,39 @@ linux_get_kse_count(void)
 unsigned int
 linux_get_runqueue_length(void)
 {
-#ifdef __ANDROID__
-    //WORKAROUND FOR BROKEN GETLINE() ON ANDROID
-    return (1);
-#else
-    FILE   *f;
-    char   *buf = NULL;
-    size_t  len = 0;
-    ssize_t bytes;
-    int     runqsz = -1;
+    int fd;
+    char   buf[16384];
+    char   *p;
+    ssize_t  len = 0;
+    unsigned int     runqsz = 0;
 
-    f = fopen("/proc/stat", "r");
-    if (f == NULL) {
-        dbg_perror("fopen() of /proc/stat");
-        return (-1);
+    fd = open("/proc/stat", O_RDONLY);
+    if (fd <0) {
+        dbg_perror("open() of /proc/stat");
+        return (1);
     }
 
-   while ((bytes = getline(&buf, &len, f)) != -1) {
-       if (bytes == 16 && strncmp(buf, "procs_running", 13) == 0) {
-           runqsz = atoi(buf + 14);
-           free(buf);
-           break;
-       }
-   }
-   if (runqsz < 0) {
-       /* TODO: this should be an assertion */
-       runqsz = 1; //WORKAROUND
-   }
+    /* Read the entire file into memory */
+    len = read(fd, &buf, sizeof(buf) - 1);
+    if (len < 0) {
+        dbg_perror("read failed");
+        goto out;
+    }
+    //printf("buf=%s len=%d\n", buf, (int)len);
 
-   (void) fclose(f);
+    /* Search for 'procs_running %d' */
+    p = strstr(buf, "procs_running");
+    if (p != NULL) {
+        runqsz = atoi(p + 14);
+    }
 
-   return ((unsigned int) runqsz);
-#endif
+out:
+    if (runqsz == 0) {
+        /* TODO: this should be an assertion */
+        runqsz = 1; //WORKAROUND
+    }
+
+    (void) close(fd);
+
+    return (runqsz);
 }
