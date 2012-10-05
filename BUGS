@@ -1,3 +1,7 @@
 BUGS
 ----
 
+ * The getline() implementation for Android causes memory corruption and
+   crashes halfway through reading the /proc/status file. This only occurs
+   on a quad core tablet.
+   

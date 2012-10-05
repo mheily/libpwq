@@ -34,7 +34,7 @@
 
 /* KLUDGE */
 #ifdef __ANDROID__
-#include "../android/getline.c"
+//FIXME: broken: #include "../android/getline.c"
 #endif
 
 /* Problem: does not include the length of the runqueue, and
@@ -83,6 +83,10 @@ linux_get_kse_count(void)
 unsigned int
 linux_get_runqueue_length(void)
 {
+#ifdef __ANDROID__
+    //WORKAROUND FOR BROKEN GETLINE() ON ANDROID
+    return (1);
+#else
     FILE   *f;
     char   *buf = NULL;
     size_t  len = 0;
@@ -110,4 +114,5 @@ linux_get_runqueue_length(void)
    (void) fclose(f);
 
    return ((unsigned int) runqsz);
+#endif
 }
