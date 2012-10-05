@@ -87,7 +87,7 @@ linux_get_runqueue_length(void)
     char   *buf = NULL;
     size_t  len = 0;
     ssize_t bytes;
-    int     runqsz;
+    int     runqsz = -1;
 
     f = fopen("/proc/stat", "r");
     if (f == NULL) {
@@ -101,6 +101,10 @@ linux_get_runqueue_length(void)
            free(buf);
            break;
        }
+   }
+   if (runqsz < 0) {
+       /* TODO: this should be an assertion */
+       runqsz = 1; //WORKAROUND
    }
 
    (void) fclose(f);
