@@ -276,6 +276,10 @@ int main() {
 
 	pthread_workqueue_init_np();
 
+#ifdef __linux__
+    printf("runqueue length=%d\n", linux_get_runqueue_length());
+#endif
+
     sem_init(&test_complete, 0, 0);
 
     run_overcommit_test(NULL);
