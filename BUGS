@@ -1,3 +1,8 @@
 BUGS
 ----
 
+ * max_workers is wrong on Linux, the new code may be broken
+
+ * pthread_workqueue_suspend_np() and pthread_workqueue_resume_np() 
+   are not yet implemented on Windows.
+

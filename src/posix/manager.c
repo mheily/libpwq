@@ -79,6 +79,7 @@ static struct {
                     count,
                     idle;
     sem_t sb_sem;
+    unsigned int sb_suspend;
 } scoreboard;
 
 /* Thread limits */
@@ -160,6 +161,7 @@ manager_init(void)
     
     scoreboard.count = 0;
     scoreboard.idle = 0;
+    scoreboard.sb_suspend = 0;
     
     /* Determine the initial thread pool constraints */
     worker_min = 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
@@ -555,28 +557,36 @@ manager_main(void *unused __attribute__ ((unused)))
         worker_start();
 
     for (;;) {
-        dbg_puts("manager is sleeping");
-                
-        if (gettimeofday(&tp, NULL) != 0) {
-            dbg_perror("gettimeofday()"); // can only fail due to overflow of date > 2038 on 32-bit platforms...
-        }
 
-        /* Convert from timeval to timespec */
-        ts.tv_sec  = tp.tv_sec;
-        ts.tv_nsec = tp.tv_usec * 1000;
-        ts.tv_sec += 1; // wake once per second and check if we have too many idle threads...
+        if (scoreboard.sb_suspend == 0) {
+            dbg_puts("manager is sleeping");
 
-        // We should only sleep on the condition if there are no pending signal, spurious wakeup is also ok
+            if (gettimeofday(&tp, NULL) != 0) {
+                dbg_perror("gettimeofday()"); // can only fail due to overflow of date > 2038 on 32-bit platforms...
+            }
 
-        if ((sem_timedwait_rv = sem_timedwait(&scoreboard.sb_sem, &ts)) != 0)
-        {
-            sem_timedwait_rv = errno; // used for ETIMEDOUT below
-            if (errno != ETIMEDOUT)
-                dbg_perror("sem_timedwait()");
+            /* Convert from timeval to timespec */
+            ts.tv_sec  = tp.tv_sec;
+            ts.tv_nsec = tp.tv_usec * 1000;
+            ts.tv_sec += 1; // wake once per second and check if we have too many idle threads...
+
+            // We should only sleep on the condition if there are no pending signal, spurious wakeup is also ok
+
+            if ((sem_timedwait_rv = sem_timedwait(&scoreboard.sb_sem, &ts)) != 0)
+            {
+                sem_timedwait_rv = errno; // used for ETIMEDOUT below
+                if (errno != ETIMEDOUT)
+                    dbg_perror("sem_timedwait()");
+            }
+
+            dbg_puts("manager is awake");
+        } else {
+            dbg_puts("manager is suspending");
+            if (sem_wait(&scoreboard.sb_sem) != 0)
+                dbg_perror("sem_wait()");
+            dbg_puts("manager is resuming");
         }
         
-        dbg_puts("manager is awake");
-
         dbg_printf("idle=%u workers=%u max_workers=%u worker_min = %u",
                    scoreboard.idle, scoreboard.count, worker_max, worker_min);
                 
@@ -697,6 +707,28 @@ manager_start(void)
     } while (rv != 0);
 
     wqlist_has_manager = 1;
+}
+
+void 
+manager_suspend(void)
+{
+    /* Wait for the manager thread to be initialized */
+    while (wqlist_has_manager == 0) {
+        sleep(1);
+    }
+    if (scoreboard.sb_suspend == 0) { 
+        scoreboard.sb_suspend = 1;
+    }
+}
+
+void
+manager_resume(void)
+{
+    if (scoreboard.sb_suspend) { 
+        scoreboard.sb_suspend = 0;
+        __sync_synchronize();
+        (void) sem_post(&scoreboard.sb_sem);        
+    }
 }
 
 void

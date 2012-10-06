@@ -213,3 +213,19 @@ pthread_workqueue_peek_np(const char *key)
 {
     return manager_peek(key);
 }
+
+void VISIBLE
+pthread_workqueue_suspend_np(void)
+{
+#ifndef _WIN32
+    manager_suspend();
+#endif
+}
+
+void VISIBLE
+pthread_workqueue_resume_np(void)
+{
+#ifndef _WIN32
+    manager_resume();
+#endif
+}
