@@ -81,7 +81,8 @@ project.add(
 
 )
 
-Makeconf.configure(project)
+mc = Makeconf.new
+mc.configure(project)
   
 #Makeconf.configure(
 #  :id       => 'libpthread_workqueue',
