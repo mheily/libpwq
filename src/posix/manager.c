@@ -64,6 +64,7 @@ static int               ocwq_mask;
 static pthread_mutex_t   ocwq_mtx;
 static pthread_cond_t    ocwq_has_work;
 static unsigned int      ocwq_idle_threads;
+static unsigned int      ocwq_signal_count;     // number of times OCWQ condition was signalled
 
 /* Non-overcommit */
 static struct _pthread_workqueue *wqlist[PTHREAD_WORKQUEUE_MAX];
@@ -144,6 +145,7 @@ manager_init(void)
     pthread_mutex_init(&ocwq_mtx, NULL);
     ocwq_mask = 0;
     ocwq_idle_threads = 0;
+    ocwq_signal_count = 0;
 
     witem_cache_init();
 
@@ -280,24 +282,23 @@ overcommit_worker_main(void *arg)
         ocwq_idle_threads++;
         dbg_printf("waiting for work (idle=%d)", ocwq_idle_threads);
         rv = pthread_cond_timedwait(&ocwq_has_work, &ocwq_mtx, &ts);
-        /* Even on error/timeout check we have no work to do to avoid lost wakeup */
-        if (ocwq_mask != 0) continue;
-        if (rv != 0) {
+        if (ocwq_signal_count > 0) {
+            ocwq_signal_count--;
+            continue;
+        }
+
+        if ((rv == 0) || (rv == ETIMEDOUT)) {
             /* Normally, the signaler will decrement the idle counter,
                but this path is not taken in response to a signaler.
              */
             ocwq_idle_threads--;
-	    pthread_mutex_unlock(&ocwq_mtx);
-
-            if (rv == ETIMEDOUT) {
-                dbg_puts("timeout, no work available");
-                break;
-            } else {
-                dbg_perror("pthread_cond_timedwait");
-                abort();
-                break;
-            }
+            pthread_mutex_unlock(&ocwq_mtx);
+            break;
         }
+
+        dbg_perror("pthread_cond_timedwait");
+        abort();
+        break;
     }
 
     dbg_printf("worker exiting (idle=%d)", ocwq_idle_threads);
@@ -748,6 +749,7 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
             dbg_puts("signaling an idle worker");
             pthread_cond_signal(&ocwq_has_work);
             ocwq_idle_threads--;
+            ocwq_signal_count++;
         } else {
             (void)pthread_create(&tid, &detached_attr, overcommit_worker_main, NULL);
         }
