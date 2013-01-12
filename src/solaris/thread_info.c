@@ -96,11 +96,11 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 
     if (actual_read != sizeof(prheader_t))
     {
-        dbg_printf("read returned wrong number of bytes - %ld instead of %ld", actual_read, sizeof(prheader_t));
+        dbg_printf("read returned wrong number of bytes - %ld instead of %ld", (long int) actual_read, (long int) sizeof(prheader_t));
         goto errout;
     }
 
-    dbg_printf("read prheader, pr_nent = %ld, pr_entsize = %ld, sizeof(lwpstatus_t) = %ld",prheader.pr_nent, prheader.pr_entsize, sizeof(lwpstatus_t));
+    dbg_printf("read prheader, pr_nent = %ld, pr_entsize = %ld, sizeof(lwpstatus_t) = %ld", (long int) prheader.pr_nent,  (long int) prheader.pr_entsize, (unsigned long) sizeof(lwpstatus_t));
 
     lwp_buffer = malloc(prheader.pr_nent * prheader.pr_entsize);
 
@@ -114,7 +114,7 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 
     if (actual_read != (prheader.pr_nent * prheader.pr_entsize))
     {
-        dbg_printf("read returned wrong number of bytes - %ld instead of %ld", actual_read, prheader.pr_nent * prheader.pr_entsize);
+        dbg_printf("read returned wrong number of bytes - %ld instead of %ld", (long) actual_read, (long) (prheader.pr_nent * prheader.pr_entsize));
         free(lwp_buffer);
         goto errout;
     }
@@ -122,16 +122,16 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
     for (i = 0; i < prheader.pr_nent; i++)
     {
         lwpstatus = (lwpstatus_t *) (lwp_buffer + (i * prheader.pr_entsize));
-        dbg_printf("lwp %d, syscall = %d", lwpstatus->pr_lwpid, lwpstatus->pr_syscall);
+        dbg_printf("lwp %d, syscall = %d", (int) lwpstatus->pr_lwpid, (int) lwpstatus->pr_syscall);
         
         if (lwpstatus->pr_flags & PR_ASLEEP)
         {            
-            dbg_printf("lwp %d is sleeping",lwpstatus->pr_lwpid);
+            dbg_printf("lwp %d is sleeping", (int)lwpstatus->pr_lwpid);
         }   
         else
         {
             running_count++;
-            dbg_printf("lwp %d is running",lwpstatus->pr_lwpid);
+            dbg_printf("lwp %d is running", (int) lwpstatus->pr_lwpid);
         }        
     }
 
