@@ -1,3 +1,9 @@
+HEAD
+---
+
+ * Block all signals when executing work on the overcommit queues.
+   (Credit: Jean-Charles BERTIN)
+
 Version 0.8.2 r195
 released 7/16/2011
 ---

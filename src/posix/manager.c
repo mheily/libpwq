@@ -241,7 +241,7 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
 }
 
 static void *
-overcommit_worker_main(void *arg)
+overcommit_worker_main(void *unused __attribute__ ((unused)))
 {
     struct timespec ts;
     pthread_workqueue_t workq;
@@ -249,8 +249,11 @@ overcommit_worker_main(void *arg)
     void *func_arg;
     struct work *witem;
     int rv, idx;
+    sigset_t sigmask;
 
-    (void)arg;
+    /* Block all signals */
+    sigfillset(&sigmask);
+    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
      
     pthread_mutex_lock(&ocwq_mtx);
 
@@ -424,13 +427,12 @@ wqlist_scan_wait(int *queue_priority)
 }
 
 static void *
-worker_main(void *arg)
+worker_main(void *unused __attribute__ ((unused)))
 {
     struct work *witem;
     int current_thread_priority = WORKQ_DEFAULT_PRIOQUEUE;
     int queue_priority = WORKQ_DEFAULT_PRIOQUEUE;
-    
-    (void) arg;
+
     dbg_puts("worker thread started");
     atomic_dec(&pending_thread_create);
         
