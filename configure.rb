@@ -58,6 +58,15 @@ project.add(
     :ldadd => ldadd
     ),
 
+  Header.new(
+    :id => 'pthread_workqueue.h',
+    :sources => 'include/pthread_workqueue.h'
+    ),
+
+  Manual.new(
+    'pthread_workqueue.3'
+    ),
+
   Test.new(
     :id => 'api',
     :sources => [ 'testing/api/test.c' ],
