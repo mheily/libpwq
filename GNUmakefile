@@ -116,7 +116,7 @@ distdir:
 	cp -RL src/posix/platform.h src/posix/thread_info.c src/posix/manager.c src/posix/thread_rt.c src/posix/*.c $(distdir)/src/posix
 	cp -RL src/linux/platform.h src/linux/load.c src/linux/thread_info.c src/linux/thread_rt.c src/linux/*.c $(distdir)/src/linux
 	cp -RL include/pthread_workqueue.h $(distdir)/include
-	cp -RL GNUmakefile configure configure.rb $(distdir)
+	cp -RL GNUmakefile pthread_workqueue.3 configure configure.rb $(distdir)
 	cp -RL src/linux/../private.h src/linux/../debug.h $(distdir)/src/linux/..
 	cp -RL src/linux/../posix/platform.h $(distdir)/src/linux/../posix
 	cp -RL src/linux/../linux/platform.h $(distdir)/src/linux/../linux
@@ -135,6 +135,14 @@ distdir:
 install: 
 	/usr/bin/test -e $(DESTDIR)$(LIBDIR) || $(INSTALL) -d -m 755 $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0644 libpthread_workqueue.so $(DESTDIR)$(LIBDIR)/libpthread_workqueue.so.0.0
+	/usr/bin/test -e $(DESTDIR)$(INCLUDEDIR) || $(INSTALL) -d -m 755 $(DESTDIR)$(INCLUDEDIR)
+	$(INSTALL) -m 644 include/pthread_workqueue.h $(DESTDIR)$(INCLUDEDIR)
+	/usr/bin/test -e $(DESTDIR)$(MANDIR)/man3 || $(INSTALL) -d -m 755 $(DESTDIR)$(MANDIR)/man3
+	$(INSTALL) -m 644 pthread_workqueue.3 $(DESTDIR)$(MANDIR)/man3
+	rm -f $(DESTDIR)$(LIBDIR)/libpthread_workqueue.so
+	ln -s libpthread_workqueue.so.0.0 $(DESTDIR)$(LIBDIR)/libpthread_workqueue.so
+	rm -f $(DESTDIR)$(LIBDIR)/libpthread_workqueue.so.0
+	ln -s libpthread_workqueue.so.0.0 $(DESTDIR)$(LIBDIR)/libpthread_workqueue.so.0
 
 latency: testing/latency/latency.o
 	$(LD)  -o latency -L . -Wl,-rpath,. -L . $(LDFLAGS) testing/latency/latency.o libpthread_workqueue.a -lpthread -lrt $(LDADD)
@@ -150,12 +158,12 @@ libpthread_workqueue-0.8.3.tar.gz:
 
 libpthread_workqueue.a: src/witem_cache.o src/api.o src/posix/thread_info.o src/posix/manager.o src/posix/thread_rt.o src/linux/load.o src/linux/thread_info.o src/linux/thread_rt.o
 ifneq ($(DISABLE_STATIC),1)
-	ar cru libpthread_workqueue.a src/witem_cache.o src/api.o src/posix/thread_info.o src/posix/manager.o src/posix/thread_rt.o src/linux/load.o src/linux/thread_info.o src/linux/thread_rt.o
-	ranlib libpthread_workqueue.a
+	$(AR) cru libpthread_workqueue.a src/witem_cache.o src/api.o src/posix/thread_info.o src/posix/manager.o src/posix/thread_rt.o src/linux/load.o src/linux/thread_info.o src/linux/thread_rt.o
+	$(RANLIB) libpthread_workqueue.a
 endif
 
 libpthread_workqueue.so: src/witem_cache.o src/api.o src/posix/thread_info.o src/posix/manager.o src/posix/thread_rt.o src/linux/load.o src/linux/thread_info.o src/linux/thread_rt.o
-	$(LD)  -o libpthread_workqueue.so -shared -fPIC -L . $(LDFLAGS) src/witem_cache.o src/api.o src/posix/thread_info.o src/posix/manager.o src/posix/thread_rt.o src/linux/load.o src/linux/thread_info.o src/linux/thread_rt.o -lpthread -lrt $(LDADD)
+	$(LD)  -o libpthread_workqueue.so -shared -fPIC -L . -Wl,-soname,libpthread_workqueue.so.0 $(LDFLAGS) src/witem_cache.o src/api.o src/posix/thread_info.o src/posix/manager.o src/posix/thread_rt.o src/linux/load.o src/linux/thread_info.o src/linux/thread_rt.o -lpthread -lrt $(LDADD)
 
 package: clean libpthread_workqueue-0.8.3.tar.gz
 	rm -rf rpm *.rpm
@@ -203,6 +211,8 @@ testing/witem_cache/test.o: testing/witem_cache/test.c testing/witem_cache/../..
 
 uninstall: 
 	rm -f $(DESTDIR)$(LIBDIR)/libpthread_workqueue.so
+	rm -f $(DESTDIR)$(INCLUDEDIR)/include/pthread_workqueue.h
+	rm -f $(DESTDIR)$(MANDIR)/man3/pthread_workqueue.3
 
 witem_cache: testing/witem_cache/test.o
 	$(LD)  -o witem_cache -L . -Wl,-rpath,. -L . $(LDFLAGS) testing/witem_cache/test.o libpthread_workqueue.a -lpthread -lrt $(LDADD)
