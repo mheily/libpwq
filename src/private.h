@@ -109,7 +109,7 @@ extern unsigned int PWQ_ACTIVE_CPU;
 #endif
 
 /* XXX-FIXME this is a stub, need to research what ARM assembly to use */
-#elif defined(__ARM_ARCH_5__)
+#elif defined(__ARM_EABI__)
 
 #define _hardware_pause() __asm__("")
 
