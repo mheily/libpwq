@@ -1,5 +1,8 @@
-HEAD
+Version 0.9 r286
+released 9/10/2013
 ---
+
+ * Use GNU autotools as the default build system.
 
  * Block all signals when executing work on the overcommit queues.
    (Credit: Jean-Charles BERTIN)
