@@ -13,6 +13,8 @@ libpthread_workqueue_la_SOURCES = src/api.c src/witem_cache.c src/posix/manager.
   ./src/thread_rt.h \
   ./src/debug.h
 
+libpthread_workqueue_la_LIBADD = -lpthread -lrt
+
 libpthread_workqueue_la_CFLAGS = -I./include -I./src -Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99
 
 check_PROGRAMS = test_api test_latency test_witem_cache
