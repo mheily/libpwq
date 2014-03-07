@@ -115,7 +115,8 @@ extern unsigned int PWQ_ACTIVE_CPU;
 
 #else
 
-#error Need to define _hardware_pause() for this architure
+/* XXX-FIXME this is a stub, need to research what assembly to use */
+#define _hardware_pause() __asm__("")
 
 #endif 
 
