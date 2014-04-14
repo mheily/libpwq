@@ -128,6 +128,11 @@ manager_reinit(void)
 {
     if (manager_init() < 0)
         abort();
+
+    for (size_t i = 0; i < PTHREAD_WORKQUEUE_MAX; i++) {
+        wqlist[i] = NULL;
+        ocwq[i] = NULL;
+    }
 }
 #endif
 
