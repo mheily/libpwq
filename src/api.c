@@ -114,6 +114,35 @@ pthread_workqueue_create_np(pthread_workqueue_t *workqp,
 }
 
 int VISIBLE
+pthread_workqueue_destroy_np(pthread_workqueue_t workq) {
+	if(!valid_workq(workq))
+		return (EINVAL);
+
+	if (!STAILQ_EMPTY(&workq->item_listhead)) {
+		printf("destroying non-empty queue %p\n", workq);
+		abort();
+	}
+
+	if(pthread_spin_trylock(&workq->mtx)) {
+		printf("destroying in-use queue %p\n", workq);
+		abort();
+	}
+
+	/* trash magic signature to crash on use-after-free */
+	workq->sig = 0xdeadc0de;
+	/* trash ptr dito. */
+	STAILQ_FIRST(&workq->item_listhead) = (struct work*)0xbad;
+
+	pthread_spin_unlock(&workq->mtx);
+
+	pthread_spin_destroy(&workq->mtx);
+	manager_workqueue_destroy(workq);
+	free(workq);
+
+	return (0);
+}
+
+int VISIBLE
 pthread_workqueue_additem_np(pthread_workqueue_t workq,
                      void (*workitem_func)(void *), void * workitem_arg,
                      pthread_workitem_handle_t * itemhandlep, 
