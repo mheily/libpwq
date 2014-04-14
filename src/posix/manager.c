@@ -240,6 +240,28 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
     pthread_mutex_unlock(&wqlist_mtx);
 }
 
+void manager_workqueue_destroy(struct _pthread_workqueue *workq) {
+    pthread_mutex_lock(&wqlist_mtx);
+    if (workq->overcommit) {
+        if (ocwq[workq->queueprio] != NULL) {
+            ocwq[workq->queueprio] = NULL;
+        } else {
+            printf("oc queue %d does not exists\n", workq->queueprio);
+            abort();
+        }
+    } else {
+        if (wqlist[workq->queueprio] != NULL) {
+            wqlist[workq->queueprio] = NULL;
+        } else {
+            printf("queue %d does not exists\n", workq->queueprio);
+            abort();
+        }
+    }
+    dbg_printf("destroyed workqueue (ocommit=%d, prio=%d)",
+               (workq->overcommit) ? 1 : 0, workq->queueprio);
+    pthread_mutex_unlock(&wqlist_mtx);
+}
+
 static void *
 overcommit_worker_main(void *unused __attribute__ ((unused)))
 {

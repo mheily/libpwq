@@ -164,6 +164,7 @@ unsigned long manager_peek(const char *);
 void manager_suspend(void);
 void manager_resume(void);
 void manager_workqueue_create(struct _pthread_workqueue *);
+void manager_workqueue_destroy(struct _pthread_workqueue *);
 void manager_workqueue_additem(struct _pthread_workqueue *, struct work *);
 
 struct work *witem_alloc(void (*func)(void *), void *func_arg); // returns a properly initialized witem
