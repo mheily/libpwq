@@ -67,7 +67,7 @@ unsigned long gettime(void)
 
 static mytime_t gettime(void)
 {
-#ifdef __linux__
+#if defined(CLOCK_MONOTONIC)
 	struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
 		        fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
@@ -82,6 +82,7 @@ static mytime_t gettime(void)
 
 	return (mytime_t)(now.QuadPart * NANOSECONDS_PER_SECOND / freq.QuadPart);
 #else
+    /* NOTE: this appears to be for Solaris */
     struct timespec ts;
     if (clock_gettime(CLOCK_HIGHRES, &ts) != 0)
 		        fprintf(stderr, "Failed to get high resolution clock! errno = %d\n", errno);   
