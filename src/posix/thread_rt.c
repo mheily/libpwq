@@ -32,6 +32,7 @@
 
 void ptwq_set_current_thread_priority(int priority)
 {    
+    (void) priority;
     return;
 }
 

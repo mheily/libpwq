@@ -32,6 +32,8 @@
 
 int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 {
+    (void) threads_running;
+    (void) threads_total;
     return -1;
 }
 
