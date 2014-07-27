@@ -4,14 +4,18 @@ lib_LTLIBRARIES = libpthread_workqueue.la
 include_HEADERS = include/pthread_workqueue.h
 dist_man_MANS = pthread_workqueue.3
 
-libpthread_workqueue_la_SOURCES = src/api.c src/witem_cache.c src/posix/manager.c  src/posix/thread_info.c src/posix/thread_rt.c src/linux/load.c  src/linux/thread_info.c src/linux/thread_rt.c \
+libpthread_workqueue_la_SOURCES = src/api.c src/witem_cache.c src/posix/manager.c  src/posix/thread_info.c src/posix/thread_rt.c  \
   ./include/pthread_workqueue.h \
-  ./src/linux/platform.h \
   ./src/posix/platform.h \
   ./src/thread_info.h \
   ./src/private.h \
   ./src/thread_rt.h \
   ./src/debug.h
+
+if LINUX
+    libpthread_workqueue_la_SOURCES += src/linux/load.c  src/linux/thread_info.c src/linux/thread_rt.c src/linux/platform.h
+endif
+    
 
 libpthread_workqueue_la_LIBADD = -lpthread -lrt
 
