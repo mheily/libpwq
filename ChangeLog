@@ -1,3 +1,12 @@
+Version 0.9.2   
+released 07/27/2014
+---
+
+  1683979 more direct check for CLOCK_MONOTONIC
+  f9eda69 Tweak for FreeBSD compilation
+  217fe4f Add conditional compilation for Linux
+  872c1e8 Trivial fixes for unused variables
+
 Version 0.9 r289
 released 9/10/2013
 ---
