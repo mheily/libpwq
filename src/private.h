@@ -58,7 +58,7 @@
 #define PTHREAD_WORKQUEUE_MAX 31
 
 /* The total number of priority levels. */
-#define WORKQ_NUM_PRIOQUEUE 4
+#define WORKQ_NUM_PRIOQUEUE 6
 
 /* Signatures/magic numbers.  */
 #define PTHREAD_WORKQUEUE_SIG       0xBEBEBEBE

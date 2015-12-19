@@ -52,6 +52,8 @@ typedef struct {
 #define WORKQ_DEFAULT_PRIOQUEUE    1
 #define WORKQ_LOW_PRIOQUEUE        2
 #define WORKQ_BG_PRIOQUEUE         3
+#define WORKQ_BG_PRIOQUEUE_CONDITIONAL        4
+#define WORKQ_HIGH_PRIOQUEUE_CONDITIONAL       5
 
 #if defined(__cplusplus)
 	extern "C" {
