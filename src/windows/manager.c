@@ -51,6 +51,8 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
 	pthread_spin_init(&workq->mtx, PTHREAD_PROCESS_PRIVATE);
 }
 
+void manager_workqueue_destroy(struct _pthread_workqueue *workq) {}
+
 /* The caller must hold the wqlist_mtx. */
 static struct work *
 wqlist_scan(void)
@@ -154,6 +156,8 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
 
 	workq->win_thread_pool = pool;
 }
+
+void manager_workqueue_destroy(struct _pthread_workqueue *workq) {}
 
 VOID CALLBACK 
 worker_main( PTP_CALLBACK_INSTANCE instance, PVOID Parameter, PTP_WORK work )
