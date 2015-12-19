@@ -36,12 +36,19 @@ if(WIN32)
 		-D_WINDLL
 	)
 else()
-	file(GLOB SRC 
+	file(GLOB UNIX_SRC
 		src/posix/*.h
 		src/posix/*.c
 		src/*.h
 		src/*.c
 	)
+	if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+		file(GLOB LINUX_SRC src/linux/*.c)
+		SET(SRC ${UNIX_SRC} ${LINUX_SRC})
+	elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+		file(GLOB SOLARIS_SRC src/solaris/*.c)
+		SET(SRC ${UNIX_SRC} ${SOLARIS_SRC})
+	endif()
         include_directories(
             src
         )
