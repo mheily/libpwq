@@ -199,6 +199,8 @@ pthread_workqueue_attr_setqueuepriority_np(
             case WORKQ_DEFAULT_PRIOQUEUE:
             case WORKQ_LOW_PRIOQUEUE:
             case WORKQ_BG_PRIOQUEUE:
+            case WORKQ_BG_PRIOQUEUE_CONDITIONAL:
+            case WORKQ_HIGH_PRIOQUEUE_CONDITIONAL:
                 attr->queueprio = qprio;
                 return (0);
             default:
