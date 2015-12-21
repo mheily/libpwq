@@ -1,6 +1,7 @@
 # FIXME: only supports Linux for now
+ACLOCAL_AMFLAGS = -I m4
 
-lib_LTLIBRARIES = libpthread_workqueue.la
+noinst_LTLIBRARIES = libpthread_workqueue.la
 include_HEADERS = include/pthread_workqueue.h
 dist_man_MANS = pthread_workqueue.3
 
@@ -15,7 +16,6 @@ libpthread_workqueue_la_SOURCES = src/api.c src/witem_cache.c src/posix/manager.
 if LINUX
     libpthread_workqueue_la_SOURCES += src/linux/load.c  src/linux/thread_info.c src/linux/thread_rt.c src/linux/platform.h
 endif
-    
 
 libpthread_workqueue_la_LIBADD = -lpthread -lrt
 
