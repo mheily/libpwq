@@ -1,7 +1,7 @@
 # FIXME: only supports Linux for now
 ACLOCAL_AMFLAGS = -I m4
 
-noinst_LTLIBRARIES = libpthread_workqueue.la
+lib_LTLIBRARIES = libpthread_workqueue.la
 include_HEADERS = include/pthread_workqueue.h
 dist_man_MANS = pthread_workqueue.3
 
@@ -19,19 +19,19 @@ endif
 
 libpthread_workqueue_la_LIBADD = -lpthread -lrt
 
-libpthread_workqueue_la_CFLAGS = -I./include -I./src -Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -fvisibility=hidden
+libpthread_workqueue_la_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -fvisibility=hidden
 
 check_PROGRAMS = test_api test_latency test_witem_cache
 TESTS = test_api test_latency test_witem_cache
 
 test_api_SOURCES = testing/api/test.c ./testing/api/posix_semaphore.h
-test_api_CFLAGS = -I./include
+test_api_CFLAGS = -I$(top_srcdir)/include -I$(builddir)
 test_api_LDADD = libpthread_workqueue.la -lpthread -lrt
 
 test_latency_SOURCES = testing/latency/latency.c ./testing/latency/latency.h
-test_latency_CFLAGS = -I./include
+test_latency_CFLAGS = -I$(top_srcdir)/include
 test_latency_LDADD = libpthread_workqueue.la -lpthread -lrt
 
 test_witem_cache_SOURCES = testing/witem_cache/test.c
-test_witem_cache_CFLAGS = -I./include
+test_witem_cache_CFLAGS = -I$(top_srcdir)/include
 test_witem_cache_LDADD = libpthread_workqueue.la -lpthread -lrt
