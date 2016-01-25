@@ -17,6 +17,7 @@ if LINUX
     libpthread_workqueue_la_SOURCES += src/linux/load.c  src/linux/thread_info.c src/linux/thread_rt.c src/linux/platform.h
 endif
 
+
 libpthread_workqueue_la_LIBADD = -lpthread -lrt
 
 libpthread_workqueue_la_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Wall -Wextra -Werror -D_XOPEN_SOURCE=600 -D__EXTENSIONS__ -D_GNU_SOURCE -std=c99 -fvisibility=hidden
