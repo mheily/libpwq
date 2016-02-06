@@ -6,15 +6,15 @@
 #if !defined(_WIN32)
 # include <sys/wait.h>
 # if !defined(NO_CONFIG_H)
-#  include "../../config.h"
+#  include "config.h"
 # endif
 # include <semaphore.h>
 #else
 # define inline _inline
-# include "../../src/windows/platform.h"
+# include "src/windows/platform.h"
 # include "posix_semaphore.h"
 #endif
-#include "../../src/private.h"
+#include "src/private.h"
 
 #if HAVE_ERR_H
 # include <err.h>
