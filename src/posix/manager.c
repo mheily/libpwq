@@ -171,7 +171,7 @@ manager_init(void)
     scoreboard.sb_suspend = 0;
     
     /* Determine the initial thread pool constraints */
-    worker_min = 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
+    worker_min = getenv("PWQ_WMIN") ? atoi(getenv("PWQ_WMIN")) : 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
     worker_idle_threshold = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : worker_idle_threshold_per_cpu();
 
 /* FIXME: should test for symbol instead of for Android */
@@ -740,6 +740,14 @@ manager_resume(void)
 }
 
 void
+manager_signal(void)
+{
+    scoreboard.sb_suspend = 0;
+    __sync_synchronize();
+    (void) sem_post(&scoreboard.sb_sem);
+}
+
+void
 manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 {
     unsigned int wqlist_index_bit = (0x1 << workq->wqlist_index);
@@ -790,7 +798,9 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
         // and no other thread have managed to race us and empty the wqlist on our behalf already
         if (scoreboard.idle > 0) // && ((wqlist_mask & wqlist_index_bit) != 0)) // disabling this fringe optimization for now
         {
-            pthread_cond_signal(&wqlist_has_work); // don't need to hold the mutex to signal
+			pthread_mutex_lock(&wqlist_mtx);
+			pthread_cond_signal(&wqlist_has_work);
+			pthread_mutex_unlock(&wqlist_mtx);
         }
     }
 }

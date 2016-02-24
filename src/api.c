@@ -231,3 +231,11 @@ pthread_workqueue_resume_np(void)
     manager_resume();
 #endif
 }
+
+void VISIBLE
+pthread_workqueue_signal_np(void)
+{
+#ifndef _WIN32
+    manager_signal();
+#endif
+}
