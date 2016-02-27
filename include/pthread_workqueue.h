@@ -93,6 +93,7 @@ int _PWQ_EXPORT pthread_workqueue_init_np(void);
 unsigned long _PWQ_EXPORT pthread_workqueue_peek_np(const char *);
 void _PWQ_EXPORT pthread_workqueue_suspend_np(void);
 void _PWQ_EXPORT pthread_workqueue_resume_np(void);
+void _PWQ_EXPORT pthread_workqueue_signal_np(void);
 
 #if defined(__cplusplus)
 	}

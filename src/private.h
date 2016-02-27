@@ -163,6 +163,7 @@ int manager_init(void);
 unsigned long manager_peek(const char *);
 void manager_suspend(void);
 void manager_resume(void);
+void manager_signal(void);
 void manager_workqueue_create(struct _pthread_workqueue *);
 void manager_workqueue_additem(struct _pthread_workqueue *, struct work *);
 

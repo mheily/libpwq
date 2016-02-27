@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([libpthread_workqueue], [0.9.2])
+AC_INIT([libpthread_workqueue], [0.9.3])
 AC_CONFIG_AUX_DIR([.])
 LT_INIT
 AM_INIT_AUTOMAKE([foreign subdir-objects])
