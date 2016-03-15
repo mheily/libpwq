@@ -78,6 +78,7 @@ static pthread_attr_t    detached_attr;
 static struct {
     volatile unsigned int runqueue_length,
                     count,
+                    about_to_wait,
                     idle;
     sem_t sb_sem;
     unsigned int sb_suspend;
@@ -169,6 +170,7 @@ manager_init(void)
     scoreboard.count = 0;
     scoreboard.idle = 0;
     scoreboard.sb_suspend = 0;
+    scoreboard.about_to_wait = 0;
     
     /* Determine the initial thread pool constraints */
     worker_min = getenv("PWQ_WMIN") ? atoi(getenv("PWQ_WMIN")) : 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
@@ -601,8 +603,16 @@ manager_main(void *unused __attribute__ ((unused)))
         // If no workers available, check if we should create a new one
         if ((scoreboard.idle == 0) && (scoreboard.count > 0) && (pending_thread_create == 0)) // last part required for an extremely unlikely race at startup
         {
+			if (scoreboard.about_to_wait) {
+
+				// one threads have gone or is about to go to
+				// block, start another thread for them.
+
+				atomic_dec(&scoreboard.about_to_wait);
+				worker_start();
+			}
             // allow cheap rampup up to worker_idle_threshold without going to /proc / checking run queue length
-            if (scoreboard.count < worker_idle_threshold) 
+            else if (scoreboard.count < worker_idle_threshold)
             {
                 worker_start();
             }                
@@ -743,6 +753,7 @@ void
 manager_signal(void)
 {
     scoreboard.sb_suspend = 0;
+    atomic_inc(&scoreboard.about_to_wait);
     __sync_synchronize();
     (void) sem_post(&scoreboard.sb_sem);
 }
