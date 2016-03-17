@@ -597,8 +597,8 @@ manager_main(void *unused __attribute__ ((unused)))
             dbg_puts("manager is resuming");
         }
         
-        dbg_printf("idle=%u workers=%u max_workers=%u worker_min = %u",
-                   scoreboard.idle, scoreboard.count, worker_max, worker_min);
+        dbg_printf("idle=%u workers=%u max_workers=%u worker_min=%u worker_idle_threshold=%u",
+                   scoreboard.idle, scoreboard.count, worker_max, worker_min, worker_idle_threshold);
                 
         // If no workers available, check if we should create a new one
         if ((scoreboard.idle == 0) && (scoreboard.count > 0) && (pending_thread_create == 0)) // last part required for an extremely unlikely race at startup
@@ -666,7 +666,7 @@ manager_main(void *unused __attribute__ ((unused)))
                 {
                     worker_idle_seconds_accumulated += scoreboard.idle; // keep track of many idle 'thread seconds' we have
                 
-                    dbg_printf("worker_idle_seconds_accumulated = %d, scoreboard.idle = %d, scoreboard.count = %d\n",
+                    dbg_printf("worker_idle_seconds_accumulated=%u scoreboard.idle=%u scoreboard.count=%u",
                        worker_idle_seconds_accumulated, scoreboard.idle, scoreboard.count);
                 }
                 else
@@ -820,7 +820,7 @@ manager_workqueue_additem(struct _pthread_workqueue *workq, struct work *witem)
 static unsigned int
 get_process_limit(void)
 {
-#if __linux__
+#if defined(__linux__)
     struct rlimit rlim;
 
     if (getrlimit(RLIMIT_NPROC, &rlim) < 0) {
@@ -884,7 +884,7 @@ get_runqueue_length(void)
     /* Prefer to use the most recent measurement of the number of running KSEs
     for Linux and the kstat unix:0:sysinfo: runque/updates ratio for Solaris . */
 
-#if __linux__
+#if defined(__linux__)
     return linux_get_runqueue_length();
 #elif defined(__sun)
     return solaris_get_runqueue_length();
@@ -910,12 +910,16 @@ manager_peek(const char *key)
 
     if (strcmp(key, "combined_idle") == 0) {
         rv = scoreboard.idle;
-        if (scoreboard.idle > worker_min)
+        if (scoreboard.idle > worker_idle_threshold)
+            rv -= worker_idle_threshold;
+        else if (scoreboard.idle > worker_min)
             rv -= worker_min;
         rv += ocwq_idle_threads;
     } else if (strcmp(key, "idle") == 0) {
         rv = scoreboard.idle;
-        if (scoreboard.idle > worker_min)
+        if (scoreboard.idle > worker_idle_threshold)
+            rv -= worker_idle_threshold;
+        else if (scoreboard.idle > worker_min)
             rv -= worker_min;
     } else if (strcmp(key, "ocomm_idle") == 0) {
         rv = ocwq_idle_threads;

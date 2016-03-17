@@ -14,8 +14,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-include ../../config.mk
-
 all: idle
 
 idle: main.c
