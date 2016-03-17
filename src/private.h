@@ -41,7 +41,7 @@
 # include "windows/platform.h"
 #else
 # include "posix/platform.h"
-# if __linux__
+# if defined(__linux__)
 #  include "linux/platform.h"
 # endif
 # if defined(__sun)

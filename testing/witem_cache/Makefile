@@ -16,8 +16,6 @@
 
 .PHONY :: install uninstall check dist dist-upload publish-www clean merge distclean fresh-build rpm edit cscope valgrind
 
-include ../../config.mk
-
 all: test-$(PROGRAM)
 
 test-$(PROGRAM): test.c

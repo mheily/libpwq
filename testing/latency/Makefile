@@ -1,7 +1,5 @@
 CC=gcc
 
-include ../../config.mk
-
 all: latency
 
 latency:
