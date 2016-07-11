@@ -173,7 +173,11 @@ manager_init(void)
     scoreboard.about_to_wait = 0;
     
     /* Determine the initial thread pool constraints */
-    worker_min = getenv("PWQ_WMIN") ? atoi(getenv("PWQ_WMIN")) : 2; // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
+    // we can start with a small amount, worker_idle_threshold will be used as new dynamic low watermark
+    if (getenv("PWQ_WMIN"))
+        worker_min = atoi(getenv("PWQ_WMIN"));
+    else
+        worker_min = cpu_count > 1 ? cpu_count : 2;
     worker_idle_threshold = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : worker_idle_threshold_per_cpu();
 
 /* FIXME: should test for symbol instead of for Android */
