@@ -31,4 +31,6 @@
 
 int threads_runnable(unsigned int *threads_running, unsigned int *threads_total);
 
+unsigned int thread_entitled_cpus(void);
+
 #endif  /* _PTWQ_POSIX_THREAD_INFO_H */
