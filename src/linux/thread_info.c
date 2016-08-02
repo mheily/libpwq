@@ -178,16 +178,9 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 
 unsigned int thread_entitled_cpus()
 {
-    unsigned int entitled_cpus = 0;
     cpu_set_t cpuset;
-    int i;
     if (pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
         return (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
-    for (i = 0; i < CPU_SETSIZE; ++i)
-    {
-        if (CPU_ISSET(i, &cpuset))
-            ++entitled_cpus;
-    }
-    return entitled_cpus;
+    return (unsigned int) CPU_COUNT(&cpuset);
 }
 
