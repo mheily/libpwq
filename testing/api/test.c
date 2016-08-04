@@ -25,7 +25,7 @@
 
 #include <pthread_workqueue.h>
 
-static int work_cnt;
+static volatile int work_cnt;
 
 /* If non-zero, extra debugging statements will be printed */
 static int dbg = 0;
@@ -85,7 +85,7 @@ sem_down(void *arg)
 void
 compute(void *arg)
 {
-    int *count = (int *) arg;
+    volatile int *count = (int *) arg;
 #define nval 5000
     int val[nval];
     int i,j;
@@ -104,7 +104,7 @@ compute(void *arg)
     }
 
     if (count != NULL) 
-        (*count)--;
+        atomic_dec(count);
 }
 
 
@@ -122,7 +122,7 @@ lazy(void *arg)
 {
     sleep(3);
     dbg_printf("item %lu complete\n", (unsigned long) arg);
-	work_cnt--;
+    atomic_dec(&work_cnt);
 }
 
 void
