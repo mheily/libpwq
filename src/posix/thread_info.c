@@ -38,3 +38,12 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 }
 
 #endif
+
+#if !defined(__linux__)
+
+unsigned int thread_entitled_cpus()
+{
+    return (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
+}
+
+#endif
