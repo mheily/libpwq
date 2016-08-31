@@ -18,6 +18,14 @@ AC_ARG_ENABLE([libpwq-install],
 )
 AM_CONDITIONAL([INSTALL],[test "x$enable_libpwq_install" != "xno"])
 
+# Add option to provide Bionic Libc (Android) support
+AC_ARG_ENABLE([bionic-libc],
+  [AS_HELP_STRING([--enable-bionic-libc],
+    [Build for Bionic Libc (Android)])],,
+  [enable_bionic_libc=yes]
+)
+AM_CONDITIONAL(BIONIC_LIBC, [test "x$enable_bionic_libc" == "xyes"])
+
 AC_CONFIG_FILES([Makefile])
 AM_CONDITIONAL([LINUX], [test `uname` = 'Linux'])
 AC_OUTPUT
