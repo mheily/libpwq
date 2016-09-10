@@ -46,6 +46,9 @@ unsigned volatile int current_threads_spinning = 0; // The number of threads cur
 
 #define WORKER_IDLE_SECONDS_THRESHOLD 15
 
+/* Thread cleanup hook */
+void (*libpwq_thread_cleanup_handler)();
+
 /* Function prototypes */
 static unsigned int get_runqueue_length(void);
 static void * worker_main(void *arg);
@@ -221,7 +224,6 @@ int getloadavg(double loadavg[], int nelem)
    return (0); 
 }
 
-void (*libpwq_thread_cleanup_handler)();
 #endif /* defined(__ANDROID__) */
 
 void
