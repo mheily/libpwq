@@ -317,11 +317,9 @@ overcommit_worker_main(void *unused __attribute__ ((unused)))
         break;
     }
 
-#if defined(__ANDROID__)
-    // used to detach thread from Java VM
+    // detach thread from JVM on Android
     if ( libpwq_thread_cleanup_handler )
         libpwq_thread_cleanup_handler();
-#endif
 
     dbg_printf("worker exiting (idle=%d)", ocwq_idle_threads);
     pthread_exit(NULL);
