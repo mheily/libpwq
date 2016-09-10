@@ -223,7 +223,6 @@ int getloadavg(double loadavg[], int nelem)
 
    return (0); 
 }
-
 #endif /* defined(__ANDROID__) */
 
 void
