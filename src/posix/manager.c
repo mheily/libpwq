@@ -220,6 +220,8 @@ int getloadavg(double loadavg[], int nelem)
 
    return (0); 
 }
+
+void (*libpwq_thread_cleanup_handler)();
 #endif /* defined(__ANDROID__) */
 
 void
@@ -292,7 +294,7 @@ overcommit_worker_main(void *unused __attribute__ ((unused)))
 
         /* Wait for more work to be available. */
         clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += 15;
+        ts.tv_sec += WORKER_IDLE_SECONDS_THRESHOLD;
         ocwq_idle_threads++;
         dbg_printf("waiting for work (idle=%d)", ocwq_idle_threads);
         rv = pthread_cond_timedwait(&ocwq_has_work, &ocwq_mtx, &ts);
@@ -314,6 +316,12 @@ overcommit_worker_main(void *unused __attribute__ ((unused)))
         abort();
         break;
     }
+
+#if defined(__ANDROID__)
+    // used to detach thread from Java VM
+    if ( libpwq_thread_cleanup_handler )
+        libpwq_thread_cleanup_handler();
+#endif
 
     dbg_printf("worker exiting (idle=%d)", ocwq_idle_threads);
     pthread_exit(NULL);
