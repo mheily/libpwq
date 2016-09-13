@@ -179,8 +179,10 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 unsigned int thread_entitled_cpus()
 {
     cpu_set_t cpuset;
+#ifdef __USE_GNU
     if (pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
         return (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
+#endif
     return (unsigned int) CPU_COUNT(&cpuset);
 }
 
