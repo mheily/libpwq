@@ -46,6 +46,9 @@ unsigned volatile int current_threads_spinning = 0; // The number of threads cur
 
 #define WORKER_IDLE_SECONDS_THRESHOLD 15
 
+/* Thread cleanup hook */
+void (*libpwq_thread_cleanup_handler)();
+
 /* Function prototypes */
 static unsigned int get_runqueue_length(void);
 static void * worker_main(void *arg);
@@ -292,7 +295,7 @@ overcommit_worker_main(void *unused __attribute__ ((unused)))
 
         /* Wait for more work to be available. */
         clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += 15;
+        ts.tv_sec += WORKER_IDLE_SECONDS_THRESHOLD;
         ocwq_idle_threads++;
         dbg_printf("waiting for work (idle=%d)", ocwq_idle_threads);
         rv = pthread_cond_timedwait(&ocwq_has_work, &ocwq_mtx, &ts);
@@ -314,6 +317,10 @@ overcommit_worker_main(void *unused __attribute__ ((unused)))
         abort();
         break;
     }
+
+    // detach thread from JVM on Android
+    if ( libpwq_thread_cleanup_handler )
+        libpwq_thread_cleanup_handler();
 
     dbg_printf("worker exiting (idle=%d)", ocwq_idle_threads);
     pthread_exit(NULL);
