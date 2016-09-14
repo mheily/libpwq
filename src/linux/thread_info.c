@@ -183,7 +183,6 @@ unsigned int thread_entitled_cpus()
     if (pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
 #endif
         return (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
-#endif
     return (unsigned int) CPU_COUNT(&cpuset);
 }
 
