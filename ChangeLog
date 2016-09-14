@@ -1,3 +1,12 @@
+HEAD
+not released yet
+---
+ * Add two new priority queues for compatibility with the latest libdispatch.
+
+ * Reinitialize queues after fork() to avoid a crash.
+
+ * Fix a compilation issue on FreeBSD
+
 Version 0.9.2   
 released 07/27/2014
 ---

@@ -41,6 +41,13 @@ int threads_runnable(unsigned int *threads_running, unsigned int *threads_total)
 
 #if !defined(__linux__)
 
+/* WORKAROUND: fix FreeBSD compilation
+   This should be done in the configure script. Only glibc-based systems
+   should define the *_SOURCE macros, I think.
+*/
+#undef _XOPEN_SOURCE
+#include <unistd.h>
+
 unsigned int thread_entitled_cpus()
 {
     return (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
