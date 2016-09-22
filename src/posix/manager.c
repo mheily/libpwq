@@ -254,6 +254,34 @@ manager_workqueue_create(struct _pthread_workqueue *workq)
     pthread_mutex_unlock(&wqlist_mtx);
 }
 
+// libdispatch expects that all non-synchronous signals
+// (signals that are targeted at the process as a whole)
+// are masked on worker threads.
+// The only signals that should be unmasked are the ones
+// that are delivered to the generating thread itself
+// (excluding the case of explicit calls to pthread_kill targeting the calling thread).
+static void sigmask_init(void)
+{
+    sigset_t sigmask;
+
+    sigfillset(&sigmask);
+    sigdelset(&sigmask, SIGILL);
+    sigdelset(&sigmask, SIGTRAP);
+#ifdef SIGEMT
+    sigdelset(&sigmask, SIGEMT);
+#endif
+    sigdelset(&sigmask, SIGFPE);
+    sigdelset(&sigmask, SIGBUS);
+    sigdelset(&sigmask, SIGSEGV);
+#if SIGSYS != SIGUNUSED
+    sigdelset(&sigmask, SIGSYS);
+#endif
+    sigdelset(&sigmask, SIGPIPE);
+    sigdelset(&sigmask, SIGPROF);
+
+    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+}
+
 static void *
 overcommit_worker_main(void *unused __attribute__ ((unused)))
 {
@@ -263,12 +291,9 @@ overcommit_worker_main(void *unused __attribute__ ((unused)))
     void *func_arg;
     struct work *witem;
     int rv, idx;
-    sigset_t sigmask;
 
-    /* Block all signals */
-    sigfillset(&sigmask);
-    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-     
+    sigmask_init();
+
     pthread_mutex_lock(&ocwq_mtx);
 
     for (;;) {
@@ -453,7 +478,9 @@ worker_main(void *unused __attribute__ ((unused)))
 
     dbg_puts("worker thread started");
     atomic_dec(&pending_thread_create);
-        
+
+    sigmask_init();
+
     for (;;) {
 
         witem = wqlist_scan(&queue_priority, 1); 
@@ -562,16 +589,13 @@ manager_main(void *unused __attribute__ ((unused)))
     unsigned int max_threads_to_stop = 0;
     unsigned int i, idle_surplus_threads = 0;
     int sem_timedwait_rv = 0;
-    sigset_t sigmask;
     struct timespec   ts;
     struct timeval    tp;
 
     worker_max = get_process_limit();
     scoreboard.runqueue_length = get_runqueue_length();
 
-    /* Block all signals */
-    sigfillset(&sigmask);
-    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+    sigmask_init();
 
     /* Create the minimum number of workers */
     for (i = 0; i < worker_min; i++)
