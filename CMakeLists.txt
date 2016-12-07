@@ -117,6 +117,10 @@ set_target_properties(pthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
 if(WIN32)
   target_compile_definitions(pthread_workqueue PRIVATE
                              LIBPTHREAD_WORKQUEUE_EXPORTS;_USRDLL;_WINDLL)
+  target_compile_definitions(pthread_workqueue
+                             PRIVATE
+                               _CRT_SECURE_NO_WARNINGS
+                               _CRT_SECURE_NO_WARNINGS_GLOBALS)
 else()
   target_compile_definitions(pthread_workqueue PRIVATE
                              _XOPEN_SOURCE=600;_GNU_SOURCE)
