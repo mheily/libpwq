@@ -24,7 +24,7 @@ file(GLOB_RECURSE INCL include/*.h)
 source_group(includes FILES ${INCL})
 
 if(WIN32)
-	file(GLOB SRC 
+	file(GLOB SRC
 		src/windows/*.h
 		src/windows/*.c
 		src/*.h
@@ -49,16 +49,16 @@ else()
 		file(GLOB SOLARIS_SRC src/solaris/*.c)
 		SET(SRC ${UNIX_SRC} ${SOLARIS_SRC})
 	endif()
-        include_directories(
-            src
-        )
-        add_definitions(
-            -DHAVE_ERR_H=1
-            -D_XOPEN_SOURCE=600
-            -D_GNU_SOURCE
-            -std=c99
-            -fPIC
-        )
+	include_directories(
+		src
+	)
+	add_definitions(
+		-DHAVE_ERR_H=1
+		D_XOPEN_SOURCE=600
+		D_GNU_SOURCE
+		std=c99
+		fPIC
+	)
 endif()
 source_group(src FILES ${SRC})
 
@@ -71,10 +71,10 @@ include_directories(
 option(STATIC_WORKQUEUE "Enable to build libpthread_workqueue as static lib" OFF)
 if(STATIC_WORKQUEUE)
 	message("-- building libpthread_workqueue as static lib")
-    add_definitions(-DMAKE_STATIC)
-    add_library(pthread_workqueue STATIC ${SRC} ${INCL})
+	add_definitions(-DMAKE_STATIC)
+	add_library(pthread_workqueue STATIC ${SRC} ${INCL})
 else()
-    add_library(pthread_workqueue SHARED ${SRC} ${INCL})
+	add_library(pthread_workqueue SHARED ${SRC} ${INCL})
 endif()
 if(NOT WIN32)
 	target_link_libraries(pthread_workqueue pthread)
@@ -84,7 +84,7 @@ set_target_properties(pthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
 #tests
 option(WORKQUEUE_TESTS "Enable to build tests for libpthread_workqueue" OFF)
 if(WORKQUEUE_TESTS)
-        message("-- Adding tests for libpthread_workqueue")
+	message("-- Adding tests for libpthread_workqueue")
 	add_subdirectory(testing)
 endif()
 
