@@ -14,77 +14,125 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8)
-INCLUDE (CheckIncludeFiles)
+cmake_minimum_required(VERSION 2.8.4)
+cmake_policy(SET CMP0063 OLD)
 
-project(pthread_workqueue)
+project(pthread_workqueue C)
 
-#files
-file(GLOB_RECURSE INCL include/*.h)
-source_group(includes FILES ${INCL})
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
 
-if(WIN32)
-	file(GLOB SRC
-		src/windows/*.h
-		src/windows/*.c
-		src/*.h
-		src/*.c
-	)
-	add_definitions(
-		-DLIBPTHREAD_WORKQUEUE_EXPORTS
-		-D_USRDLL
-		-D_WINDLL
-	)
-else()
-	file(GLOB UNIX_SRC
-		src/posix/*.h
-		src/posix/*.c
-		src/*.h
-		src/*.c
-	)
-	if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-		file(GLOB LINUX_SRC src/linux/*.c)
-		SET(SRC ${UNIX_SRC} ${LINUX_SRC})
-	elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-		file(GLOB SOLARIS_SRC src/solaris/*.c)
-		SET(SRC ${UNIX_SRC} ${SOLARIS_SRC})
-	endif()
-	include_directories(
-		src
-	)
-	add_definitions(
-		-DHAVE_ERR_H=1
-		D_XOPEN_SOURCE=600
-		D_GNU_SOURCE
-		std=c99
-		fPIC
-	)
+option(STATIC_WORKQUEUE "build libpthread_workqueue as static library" OFF)
+option(ENABLE_TESTS "build tests for libpthread_workqueue" OFF)
+
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREADS_FLAG TRUE)
+find_package(Threads REQUIRED)
+
+include(CheckIncludeFiles)
+
+if(ENABLE_TESTS)
+  check_include_files(err.h HAVE_ERR_H)
+  # HACK: Avoid generating a config.h for just a single definition
+  if(HAVE_ERR_H)
+    add_definitions(-DHAVE_ERR_H=1)
+  else()
+    add_definitions(-DHAVE_ERR_H=0)
+  endif()
+  add_definitions(-DNO_CONFIG_H)
 endif()
-source_group(src FILES ${SRC})
 
-#includes
-include_directories(
-	include
-)
+set(PTHREAD_WORKQUEUE_HEADERS
+    include/pthread_workqueue.h)
 
-#library (static or shared)
-option(STATIC_WORKQUEUE "Enable to build libpthread_workqueue as static lib" OFF)
+set(PTHREAD_WORKQUEUE_SOURCES
+    src/api.c
+    src/debug.h
+    src/private.h
+    src/thread_info.h
+    src/thread_rt.h
+    src/witem_cache.c)
+
+if(CMAKE_SYSTEM_NAME MATCHES Windows)
+  list(APPEND PTHREAD_WORKQUEUE_SOURCES
+       src/windows/manager.c
+       src/windows/platform.c
+       src/windows/platform.h
+       src/windows/posix_semaphore.h
+       src/windows/pthread_cond.h
+       src/windows/pthread_cond_variables.h
+       src/windows/pthread_create.h
+       src/windows/pthread_mutex.h
+       src/windows/pthread_rw_lock.h
+       src/windows/pthread_tls.h
+       src/windows/queue.h
+       src/windows/stdint.h
+       src/windows/thread_info.c
+       src/windows/thread_rt.c
+       src/windows/threads.h
+       src/windows/times.h)
+elseif(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+  list(APPEND PTHREAD_WORKQUEUE_SOURCES
+       src/posix/manager.c
+       src/posix/platform.h
+       src/posix/thread_info.c
+       src/posix/thread_rt.c
+       src/solaris/load.c
+       src/solaris/thread_info.c
+       src/solaris/thread_rt.c)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+  list(APPEND PTHREAD_WORKQUEUE_SOURCES
+       src/posix/manager.c
+       src/posix/platform.h
+       src/posix/thread_info.c
+       src/posix/thread_rt.c
+       src/linux/load.c
+       src/linux/thread_info.c
+       src/linux/thread_rt.c)
+else()
+  message(FATAL_ERROR "unsupported host os")
+endif()
+
+source_group(includes
+             FILES
+               ${PTHREAD_WORKQUEUE_HEADERS})
+source_group(src
+             FILES
+               ${PTHREAD_WORKQUEUE_SOURCES})
+
 if(STATIC_WORKQUEUE)
-	message("-- building libpthread_workqueue as static lib")
-	add_definitions(-DMAKE_STATIC)
-	add_library(pthread_workqueue STATIC ${SRC} ${INCL})
+  set(LIBRARY_TYPE STATIC)
 else()
-	add_library(pthread_workqueue SHARED ${SRC} ${INCL})
+  set(LIBRARY_TYPE SHARED)
 endif()
-if(NOT WIN32)
-	target_link_libraries(pthread_workqueue pthread)
-endif()
+
+add_library(pthread_workqueue
+            ${LIBRARY_TYPE}
+              ${PTHREAD_WORKQUEUE_SOURCES}
+              ${PTHREAD_WORKQUEUE_HEADERS})
 set_target_properties(pthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
 
-#tests
-option(WORKQUEUE_TESTS "Enable to build tests for libpthread_workqueue" OFF)
-if(WORKQUEUE_TESTS)
-	message("-- Adding tests for libpthread_workqueue")
-	add_subdirectory(testing)
+if(WIN32)
+  target_compile_definitions(pthread_workqueue PRIVATE
+                             LIBPTHREAD_WORKQUEUE_EXPORTS;_USRDLL;_WINDLL)
+else()
+  target_compile_definitions(pthread_workqueue PRIVATE
+                             _XOPEN_SOURCE=600;_GNU_SOURCE)
+endif()
+if(STATIC_WORKQUEUE)
+  target_compile_definitions(pthread_workqueue PRIVATE MAKE_STATIC)
+endif()
+
+target_include_directories(pthread_workqueue PRIVATE include)
+if(NOT WIN32)
+  target_include_directories(pthread_workqueue PRIVATE src)
+endif()
+
+target_link_libraries(pthread_workqueue PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+
+if(ENABLE_TESTS)
+  add_subdirectory(testing)
 endif()
 

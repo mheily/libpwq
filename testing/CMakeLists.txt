@@ -14,33 +14,37 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#files
-set(API api/test.c)
-set(WITEM_CACHE witem_cache/test.c)
-set(LATENCY latency/latency.c latency/latency.h)
+function(ADD_UNIT_TEST TEST)
+  set(options DISABLED_TEST)
+  set(single_value_args)
+  set(multiple_value_args SOURCES)
+  cmake_parse_arguments(AUT "${options}" "${single_value_args}" "${multiple_value_args}" ${ARGN})
 
+  if(AUT_DISABLED_TEST)
+    return()
+  endif()
 
-#includes
-include_directories(
-	../include
-)
+  add_executable(test_${TEST}_pthread_workqueue ${AUT_SOURCES})
+  target_include_directories(test_${TEST}_pthread_workqueue
+                             PRIVATE
+                               ${CMAKE_SOURCE_DIR}
+                               ${CMAKE_SOURCE_DIR}/include)
+  target_link_libraries(test_${TEST}_pthread_workqueue
+                        PRIVATE
+                          pthread_workqueue)
+endfunction()
 
-if(UNIX)
-    add_definitions(
-        -DNO_CONFIG_H
-    )
-endif()
-
-add_executable(test_api_pthread_workqueue ${API})
-target_link_libraries(test_api_pthread_workqueue pthread_workqueue)
-set_target_properties(test_api_pthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
-
-add_executable(test_latency_pthread_workqueue ${LATENCY})
-target_link_libraries(test_latency_pthread_workqueue pthread_workqueue)
-
+add_unit_test(api
+              SOURCES
+                api/test.c)
+add_unit_test(latency
+              SOURCES
+                latency/latency.c
+                latency/latency.h)
 if(NOT WIN32)
-
-        #add_executable(test_witem_cache_pthread_workqueue ${WITEM_CACHE})
-        #target_link_libraries(test_witem_cache_pthread_workqueue pthreads_workqueue)
-
+  add_unit_test(witem
+                DISABLED_TEST
+                SOURCES
+                  witem_cache/test.c)
 endif()
+
