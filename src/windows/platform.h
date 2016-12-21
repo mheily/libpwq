@@ -49,6 +49,11 @@
 #include "times.h"
 #include "threads.h"
 
+#define atomic_inc(p) (void)InterlockedIncrement((LONG volatile *)(p))
+#define atomic_dec(p) (void)InterlockedDecrement((LONG volatile *)(p))
+#define atomic_inc_nv(p) InterlockedIncrement((LONG volatile *)(p))
+#define atomic_dec_nv(p) InterlockedDecrement((LONG volatile *)(p))
+
 #ifdef PROVIDE_LEGACY_XP_SUPPORT
 # define WORKQUEUE_PLATFORM_SPECIFIC \
 	LIST_ENTRY(_pthread_workqueue) wqlist_entry
