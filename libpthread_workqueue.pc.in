@@ -1,11 +1,11 @@
-prefix=@@PREFIX@@
+prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
-libdir=@@LIBDIR@@
-includedir=@@INCLUDEDIR@@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 
-Name: @@PROGRAM@@
+Name: pthread_workqueue
 Description: Emulates pthread_workqueue(3) API
-Version: @@VERSION@@
-Requires: 
-Libs: @@LIBDEPENDS@@ -lpthread
-Libs.private: @@LIBDEPENDS@@
+Version: @PROJECT_VERSION@
+Requires:
+Libs: -lpthread
+Libs.private:

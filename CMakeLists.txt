@@ -14,10 +14,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 3.4.3)
 cmake_policy(SET CMP0063 OLD)
 
-project(pthread_workqueue C)
+project(pthread_workqueue VERSION 0.9.4 LANGUAGES C)
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -32,6 +32,7 @@ set(THREADS_PREFER_PTHREADS_FLAG TRUE)
 find_package(Threads REQUIRED)
 
 include(CheckIncludeFiles)
+include(GNUInstallDirs)
 
 if(ENABLE_TESTS)
   check_include_files(err.h HAVE_ERR_H)
@@ -135,4 +136,24 @@ target_link_libraries(pthread_workqueue PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 if(ENABLE_TESTS)
   add_subdirectory(testing)
 endif()
+
+configure_file("${PROJECT_SOURCE_DIR}/libpthread_workqueue.pc.in"
+               "${CMAKE_BINARY_DIR}/libpthread_workqueue.pc")
+
+install(TARGETS
+          pthread_workqueue
+        DESTINATION
+          ${CMAKE_INSTALL_FULL_LIBDIR})
+install(FILES
+          ${PTHREAD_WORKQUEUE_HEADERS}
+        DESTINATION
+          ${CMAKE_INSTAL_FULL_INCLUDEDIR})
+install(FILES
+          ${PROJECT_SOURCE_DIR}/pthread_workqueue.3
+        DESTINATION
+          ${CMAKE_INSTALL_FULL_MANDIR})
+install(FILES
+          ${CMAKE_BINARY_DIR}/libpthread_workqueue.pc
+        DESTINATION
+          ${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig)
 
