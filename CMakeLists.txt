@@ -28,7 +28,7 @@ set(CMAKE_C_STANDARD 99)
 option(STATIC_WORKQUEUE "build libpthread_workqueue as static library" OFF)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREADS_FLAG TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
 include(CheckIncludeFiles)
@@ -131,7 +131,7 @@ if(NOT WIN32)
   target_include_directories(pthread_workqueue PRIVATE src)
 endif()
 
-target_link_libraries(pthread_workqueue PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(pthread_workqueue PUBLIC Threads::Threads)
 
 if(ENABLE_TESTING)
   add_subdirectory(testing)
