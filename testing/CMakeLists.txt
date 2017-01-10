@@ -32,6 +32,9 @@ function(ADD_UNIT_TEST TEST)
   target_link_libraries(test_${TEST}_pthread_workqueue
                         PRIVATE
                           pthread_workqueue)
+
+  add_test(NAME ${TEST}
+           COMMAND test_${TEST}_pthread_workqueue)
 endfunction()
 
 add_unit_test(api

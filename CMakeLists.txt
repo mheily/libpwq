@@ -18,6 +18,7 @@ cmake_minimum_required(VERSION 3.4.3)
 cmake_policy(SET CMP0063 OLD)
 
 project(pthread_workqueue VERSION 0.9.4 LANGUAGES C)
+enable_testing()
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -25,7 +26,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 
 option(STATIC_WORKQUEUE "build libpthread_workqueue as static library" OFF)
-option(ENABLE_TESTS "build tests for libpthread_workqueue" OFF)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREADS_FLAG TRUE)
@@ -34,7 +34,7 @@ find_package(Threads REQUIRED)
 include(CheckIncludeFiles)
 include(GNUInstallDirs)
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTING)
   check_include_files(err.h HAVE_ERR_H)
   # HACK: Avoid generating a config.h for just a single definition
   if(HAVE_ERR_H)
@@ -133,7 +133,7 @@ endif()
 
 target_link_libraries(pthread_workqueue PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTING)
   add_subdirectory(testing)
 endif()
 
