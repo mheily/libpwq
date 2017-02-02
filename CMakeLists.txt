@@ -14,10 +14,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 3.4.3)
 cmake_policy(SET CMP0063 OLD)
 
-project(pthread_workqueue C)
+project(pthread_workqueue VERSION 0.9.4 LANGUAGES C)
+enable_testing()
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -25,15 +26,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 
 option(STATIC_WORKQUEUE "build libpthread_workqueue as static library" OFF)
-option(ENABLE_TESTS "build tests for libpthread_workqueue" OFF)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREADS_FLAG TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
 include(CheckIncludeFiles)
+include(GNUInstallDirs)
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTING)
   check_include_files(err.h HAVE_ERR_H)
   # HACK: Avoid generating a config.h for just a single definition
   if(HAVE_ERR_H)
@@ -112,7 +113,7 @@ add_library(pthread_workqueue
             ${LIBRARY_TYPE}
               ${PTHREAD_WORKQUEUE_SOURCES}
               ${PTHREAD_WORKQUEUE_HEADERS})
-set_target_properties(pthread_workqueue PROPERTIES DEBUG_POSTFIX "D")
+set_target_properties(pthread_workqueue PROPERTIES DEBUG_POSTFIX "d")
 
 if(WIN32)
   target_compile_definitions(pthread_workqueue PRIVATE
@@ -130,9 +131,34 @@ if(NOT WIN32)
   target_include_directories(pthread_workqueue PRIVATE src)
 endif()
 
-target_link_libraries(pthread_workqueue PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(pthread_workqueue PUBLIC Threads::Threads)
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTING)
   add_subdirectory(testing)
 endif()
+
+configure_file("${PROJECT_SOURCE_DIR}/libpthread_workqueue.pc.in"
+               "${CMAKE_BINARY_DIR}/libpthread_workqueue.pc")
+
+install(TARGETS
+          pthread_workqueue
+        DESTINATION
+          ${CMAKE_INSTALL_FULL_LIBDIR})
+install(FILES
+          ${PTHREAD_WORKQUEUE_HEADERS}
+        DESTINATION
+          ${CMAKE_INSTAL_FULL_INCLUDEDIR})
+install(FILES
+          ${PROJECT_SOURCE_DIR}/pthread_workqueue.3
+        DESTINATION
+          ${CMAKE_INSTALL_FULL_MANDIR})
+install(FILES
+          ${CMAKE_BINARY_DIR}/libpthread_workqueue.pc
+        DESTINATION
+          ${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig)
+
+set(CPACK_PACKAGE_NAME ${PACKAGE_NAME})
+set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mark Heily <mark@heily.com>")
+include(CPack)
 
