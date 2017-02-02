@@ -29,6 +29,11 @@ function(ADD_UNIT_TEST TEST)
                              PRIVATE
                                ${CMAKE_SOURCE_DIR}
                                ${CMAKE_SOURCE_DIR}/include)
+  if(WIN32)
+    target_compile_definitions(test_${TEST}_pthread_workqueue
+                               PRIVATE
+                                 _CRT_SECURE_NO_WARNINGS)
+  endif()
   target_link_libraries(test_${TEST}_pthread_workqueue
                         PRIVATE
                           pthread_workqueue)

@@ -2,7 +2,6 @@
 #define _PTWQ_WINDOWS_PLATFORM_H 1
 
 #define PROVIDE_LEGACY_XP_SUPPORT 1
-#define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 
 #ifdef PROVIDE_LEGACY_XP_SUPPORT
