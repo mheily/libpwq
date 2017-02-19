@@ -4,7 +4,7 @@ pthread\_workqueues
 Installation - Linux
 --------------------
 
-    cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib <path to soruce>
+    cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib <path to source>
     make
     make install
 
