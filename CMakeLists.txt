@@ -151,7 +151,7 @@ install(TARGETS
 install(FILES
           ${PTHREAD_WORKQUEUE_HEADERS}
         DESTINATION
-          ${CMAKE_INSTAL_FULL_INCLUDEDIR})
+          ${CMAKE_INSTALL_FULL_INCLUDEDIR})
 install(FILES
           ${PROJECT_SOURCE_DIR}/pthread_workqueue.3
         DESTINATION
