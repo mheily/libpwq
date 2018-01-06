@@ -92,6 +92,15 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
        src/linux/load.c
        src/linux/thread_info.c
        src/linux/thread_rt.c)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Android)
+  list(APPEND PTHREAD_WORKQUEUE_SOURCES
+       src/posix/manager.c
+       src/posix/platform.h
+       src/posix/thread_info.c
+       src/posix/thread_rt.c
+       src/linux/load.c
+       src/linux/thread_info.c
+       src/linux/thread_rt.c)
 else()
   message(FATAL_ERROR "unsupported host os")
 endif()
