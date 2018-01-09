@@ -180,7 +180,12 @@ unsigned int thread_entitled_cpus()
 {
     cpu_set_t cpuset;
 #ifdef __USE_GNU
+#ifdef __ANDROID__
+    // pthread_getaffinity_np analog from here: https://www.spinics.net/lists/linux-rt-users/msg16928.html
+    if (sched_getaffinity(0, sizeof(cpu_set_t), &cpuset))
+#else
     if (pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
+#endif
 #endif
         return (unsigned int) sysconf(_SC_NPROCESSORS_ONLN);
     return (unsigned int) CPU_COUNT(&cpuset);

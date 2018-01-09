@@ -35,15 +35,15 @@
 unsigned int linux_get_runqueue_length(void);
 
 /* 
- * Android does not provide spinlocks.
+ * Android does not provide spinlocks (before API 24).
  * See: http://code.google.com/p/android/issues/detail?id=21622
  */
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && __ANDROID_API__ < __ANDROID_API_N__
 #define pthread_spinlock_t     pthread_mutex_t
 #define pthread_spin_lock      pthread_mutex_lock
 #define pthread_spin_unlock    pthread_mutex_unlock
 #define pthread_spin_init(a,b) pthread_mutex_init((a), NULL)
 #define pthread_spin_destroy   pthread_mutex_destroy
-#endif /* defined(__ANDROID__) */
+#endif /* defined(__ANDROID__) && __ANDROID_API__ < __ANDROID_API_N__*/
 
 #endif /* _LIBPWQ_LINUX_PLATFORM_H */
