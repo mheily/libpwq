@@ -95,7 +95,7 @@ void _PWQ_EXPORT pthread_workqueue_suspend_np(void);
 void _PWQ_EXPORT pthread_workqueue_resume_np(void);
 void _PWQ_EXPORT pthread_workqueue_signal_np(void);
 
-void _PWQ_EXPORT (*libpwq_thread_cleanup_handler)();
+extern void _PWQ_EXPORT (*libpwq_thread_cleanup_handler)();
 #if defined(__cplusplus)
 	}
 #endif
