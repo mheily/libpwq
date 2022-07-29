@@ -126,22 +126,8 @@ worker_idle_threshold_per_cpu(void)
     return 2;
 }
 
-#if !defined(__ANDROID__)
-static void
-manager_reinit(void)
-{
-    if (manager_init() < 0)
-        abort();
-
-    for (size_t i = 0; i < PTHREAD_WORKQUEUE_MAX; i++) {
-        wqlist[i] = NULL;
-        ocwq[i] = NULL;
-    }
-}
-#endif
-
 int
-manager_init(void)
+_manager_init_common(void)
 {
     wqlist_has_manager = 0;
     pthread_cond_init(&wqlist_has_work, NULL);
@@ -182,6 +168,31 @@ manager_init(void)
     else
         worker_min = cpu_count > 1 ? cpu_count : 2;
     worker_idle_threshold = (PWQ_ACTIVE_CPU > 0) ? (PWQ_ACTIVE_CPU) : worker_idle_threshold_per_cpu();
+
+    return (0);
+}
+
+#if !defined(__ANDROID__)
+static void
+manager_reinit(void)
+{
+    if (_manager_init_common() < 0)
+        abort();
+
+    for (size_t i = 0; i < PTHREAD_WORKQUEUE_MAX; i++) {
+        wqlist[i] = NULL;
+        ocwq[i] = NULL;
+    }
+}
+#endif
+
+int
+manager_init(void)
+{
+    int status = _manager_init_common();
+    if (status != 0) {
+        return status;
+    }
 
 /* FIXME: should test for symbol instead of for Android */
 #if !defined(__ANDROID__)
