@@ -1,3 +1,11 @@
+----
+
+# *IMPORTANT NOTE*: This project is no longer being maintained. 
+
+libpwq was designed to be used with an older version of libdispatch, and is not compatible with newer versions.
+
+----
+
 pthread\_workqueues
 ===================
 
